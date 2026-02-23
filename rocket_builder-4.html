@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Race Rocket & Missile Builder</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+:root{--c:#4ecdc4;--r:#ff6b6b;--g:#ffd700;--bg:#04070e;--panel:rgba(5,12,24,0.93);--bdr:rgba(78,205,196,0.17);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Share Tech Mono',monospace;background:var(--bg);color:#dde;min-height:100vh;overflow-x:hidden;}
+#sf{position:fixed;inset:0;z-index:0;pointer-events:none;}
+body::after{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px);}
+.wrap{max-width:1460px;margin:0 auto;padding:12px 16px;position:relative;z-index:2;}
+h1{font-family:'Orbitron',sans-serif;font-size:clamp(1.4em,3vw,2.7em);font-weight:900;letter-spacing:4px;text-align:center;
+  background:linear-gradient(135deg,#ff6b6b 0%,#4ecdc4 55%,#ffd700 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:hg 3s ease-in-out infinite alternate;}
+@keyframes hg{from{filter:drop-shadow(0 0 7px rgba(78,205,196,.38))}to{filter:drop-shadow(0 0 20px rgba(255,107,107,.65))}}
+.sub{text-align:center;color:rgba(78,205,196,.55);font-size:.76em;letter-spacing:3px;margin-top:4px;}
+.hdr{padding:18px 0 10px;}
+.vb{text-align:center;min-height:30px;margin-bottom:5px;}
+.vbadge{display:inline-block;font-family:'Orbitron',sans-serif;font-size:.68em;letter-spacing:2px;padding:3px 13px;border-radius:20px;border:1.5px solid var(--g);color:var(--g);}
+.vbadge.rkt{border-color:var(--c);color:var(--c);}
+.vbadge.mis{border-color:var(--r);color:var(--r);}
+.vbadge.both{border-color:var(--g);color:var(--g);}
+/* phase bar */
+.pbar{display:flex;align-items:center;justify-content:center;margin:8px auto 18px;}
+.pn{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.pd{width:13px;height:13px;border-radius:50%;background:rgba(78,205,196,.1);border:2px solid rgba(78,205,196,.2);transition:all .4s;}
+.pd.active{background:var(--c);border-color:var(--c);box-shadow:0 0 13px var(--c);transform:scale(1.3);}
+.pd.done{background:rgba(78,205,196,.4);border-color:var(--c);}
+.pl{font-size:.55em;color:rgba(78,205,196,.38);letter-spacing:1px;}
+.pc{width:50px;height:2px;background:rgba(78,205,196,.12);margin-bottom:16px;transition:background .4s;}
+.pc.done{background:var(--c);}
+.hidden{display:none!important;}
+/* progress */
+.prg-tr{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:11px 16px;margin-bottom:14px;backdrop-filter:blur(10px);}
+.prg-tt{font-family:'Orbitron',sans-serif;font-size:.62em;color:var(--c);letter-spacing:3px;margin-bottom:10px;text-align:center;}
+.prg-bs{display:flex;gap:12px;flex-wrap:wrap;}
+.prg-it{flex:1;min-width:80px;}
+.prg-lb{font-size:.7em;color:#585858;margin-bottom:3px;display:flex;justify-content:space-between;}
+.ck{color:var(--c);opacity:0;transition:opacity .3s;}
+.ck.v{opacity:1;}
+.prg-b{height:4px;background:rgba(255,255,255,.05);border-radius:10px;overflow:hidden;}
+.prg-f{height:100%;width:0%;background:linear-gradient(90deg,var(--r),var(--c));transition:width .5s cubic-bezier(.34,1.56,.64,1);}
+.prg-f.full{width:100%;}
+/* assembly */
+.floor{display:grid;grid-template-columns:280px 1fr;gap:16px;min-height:700px;}
+@media(max-width:860px){.floor{grid-template-columns:1fr;}}
+.drawer{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:13px;backdrop-filter:blur(10px);overflow-y:auto;max-height:760px;}
+.dsec{margin-bottom:16px;}
+.dtt{font-family:'Orbitron',sans-serif;font-size:.58em;letter-spacing:2px;color:var(--r);margin-bottom:8px;padding-bottom:3px;border-bottom:1px solid rgba(255,107,107,.13);}
+.opt{background:rgba(78,205,196,.03);border:1.5px solid rgba(78,205,196,.11);border-radius:7px;padding:8px 28px 8px 10px;margin-bottom:5px;cursor:pointer;transition:all .27s cubic-bezier(.34,1.56,.64,1);position:relative;overflow:hidden;}
+.opt::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(78,205,196,.09),transparent);transform:translateX(-100%);transition:transform .38s;}
+.opt:hover::before{transform:translateX(100%);}
+.opt:hover{background:rgba(78,205,196,.08);border-color:rgba(78,205,196,.32);transform:translateX(4px);}
+.opt.sel{background:rgba(78,205,196,.13);border-color:var(--c);border-width:2px;box-shadow:0 0 12px rgba(78,205,196,.25);transform:translateX(4px);}
+.onm{font-weight:bold;color:var(--c);font-size:.8em;margin-bottom:2px;}
+.ods{font-size:.68em;color:#888;line-height:1.35;}
+.otg{display:inline-block;background:rgba(255,107,107,.09);color:var(--r);padding:1px 5px;border-radius:3px;font-size:.62em;margin-top:3px;border:1px solid rgba(255,107,107,.18);}
+.schk{position:absolute;right:8px;top:50%;transform:translateY(-50%) scale(0);color:var(--c);font-size:.95em;transition:transform .32s cubic-bezier(.34,1.56,.64,1);}
+.opt.sel .schk{transform:translateY(-50%) scale(1);}
+/* drafting table */
+.dt{background:rgba(2,7,16,.97);border:2px solid rgba(78,205,196,.13);border-radius:10px;padding:16px;display:flex;flex-direction:column;align-items:center;position:relative;
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 29px,rgba(78,205,196,.028) 29px,rgba(78,205,196,.028) 30px),repeating-linear-gradient(90deg,transparent,transparent 29px,rgba(78,205,196,.028) 29px,rgba(78,205,196,.028) 30px);}
+.dt::before{content:'BLUEPRINT // COLD WAR // CLASSIFIED';position:absolute;top:8px;left:11px;color:rgba(78,205,196,.16);font-size:.57em;letter-spacing:2px;}
+.dt::after{content:'TOP SECRET';position:absolute;top:8px;right:11px;color:rgba(255,107,107,.13);font-size:.57em;letter-spacing:2px;}
+.rcanv{width:100%;max-width:640px;}
+.ast{margin-top:9px;text-align:center;padding:9px;background:rgba(255,255,255,.02);border-radius:5px;border:1px solid rgba(255,255,255,.04);font-size:.78em;color:#585858;width:100%;max-width:640px;}
+.sh{color:var(--c);font-weight:bold;}
+/* svg */
+.bm{fill:none;stroke:rgba(78,205,196,.9);stroke-width:2;filter:drop-shadow(0 0 4px rgba(78,205,196,.3));}
+.bd{fill:none;stroke:rgba(78,205,196,.3);stroke-width:.85;}
+.bp{fill:rgba(78,205,196,.048);stroke:rgba(78,205,196,.4);stroke-width:1.1;}
+.br{fill:rgba(78,205,196,.7);}
+.be{fill:rgba(255,107,107,.13);stroke:rgba(255,107,107,.8);stroke-width:1.7;filter:drop-shadow(0 0 4px rgba(255,107,107,.3));}
+.bn{fill:rgba(255,107,107,.18);stroke:rgba(255,107,107,.82);stroke-width:1.4;}
+.bf{fill:rgba(78,205,196,.065);stroke:rgba(78,205,196,.6);stroke-width:1.4;}
+.bb{fill:rgba(78,205,196,.052);stroke:rgba(78,205,196,.6);stroke-width:1.7;}
+.bs{fill:rgba(255,165,0,.065);stroke:rgba(255,165,0,.44);stroke-width:1.1;}
+.rp{opacity:0;transition:opacity .38s ease;}
+.rp.on{opacity:1;}
+.cg{opacity:0;transition:opacity .38s ease;}
+.cg.on{opacity:1;}
+.cl{stroke:rgba(255,107,107,.42);stroke-width:.85;stroke-dasharray:4 3;animation:da 14s linear infinite;}
+@keyframes da{to{stroke-dashoffset:-200;}}
+.cb{fill:rgba(1,5,15,.98);stroke:rgba(78,205,196,.5);stroke-width:1;}
+.ch{fill:#ff9999;font-family:'Share Tech Mono',monospace;font-size:7.8px;font-weight:bold;}
+.cv{fill:#6ee6df;font-family:'Share Tech Mono',monospace;font-size:7.2px;}
+.val-a{background:rgba(255,107,107,.09);border:1.5px solid var(--r);border-radius:6px;padding:8px 12px;margin:9px 0;text-align:center;color:var(--r);font-size:.78em;animation:shk .38s ease;}
+@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+/* phase 2 */
+.lhdr{text-align:center;margin-bottom:18px;}
+.lhdr h2{font-family:'Orbitron',sans-serif;font-size:1em;color:var(--c);letter-spacing:3px;}
+.lgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+@media(max-width:600px){.lgrid{grid-template-columns:1fr;}}
+.mshelf{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:14px;backdrop-filter:blur(10px);}
+.sht{font-family:'Orbitron',sans-serif;font-size:.61em;color:var(--r);letter-spacing:2px;margin-bottom:11px;}
+.mgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;}
+.mol{background:rgba(78,205,196,.055);border:1.5px solid rgba(78,205,196,.18);border-radius:7px;padding:10px;cursor:pointer;transition:all .27s ease;text-align:center;}
+.mol:hover{background:rgba(78,205,196,.13);border-color:var(--c);transform:translateY(-3px);box-shadow:0 4px 11px rgba(78,205,196,.18);}
+.mol.sm{background:rgba(78,205,196,.2);border-color:var(--c);box-shadow:0 0 12px rgba(78,205,196,.3);}
+.mf{font-size:1.05em;color:var(--c);font-weight:bold;margin-bottom:2px;}
+.mn{font-size:.68em;color:#aaa;}
+.mt{font-size:.6em;color:var(--r);margin-top:2px;}
+.rxb{background:linear-gradient(135deg,rgba(255,107,107,.055) 0%,rgba(5,12,24,.88) 100%);border:2px dashed rgba(255,107,107,.3);border-radius:10px;padding:20px;text-align:center;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(10px);}
+.rxbt{font-family:'Orbitron',sans-serif;font-size:.61em;color:var(--r);letter-spacing:2px;margin-bottom:11px;}
+.rxsl{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;justify-content:center;}
+.rxs{background:rgba(255,255,255,.025);border:1.5px dashed rgba(78,205,196,.22);border-radius:7px;padding:10px 14px;min-width:105px;text-align:center;transition:all .27s;}
+.rxs.fl{border-color:var(--c);border-style:solid;background:rgba(78,205,196,.075);}
+.ssl{font-size:.62em;color:#454545;margin-bottom:3px;letter-spacing:1px;}
+.ssf{font-size:1.15em;color:var(--c);font-weight:bold;}
+.ssn{font-size:.62em;color:#888;margin-top:2px;}
+.ps{font-size:1.6em;color:rgba(78,205,196,.3);}
+.rigbtn{background:linear-gradient(135deg,var(--r) 0%,#982222 100%);border:none;border-radius:6px;color:#fff;font-family:'Orbitron',sans-serif;font-size:.65em;letter-spacing:2px;padding:9px 22px;cursor:pointer;transition:all .27s;box-shadow:0 3px 10px rgba(255,107,107,.22);}
+.rigbtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 14px rgba(255,107,107,.38);}
+.rigbtn:disabled{opacity:.25;cursor:not-allowed;}
+.rrb{background:rgba(78,205,196,.047);border:1px solid rgba(78,205,196,.24);border-radius:9px;padding:16px;margin-top:14px;text-align:left;width:100%;}
+.req{font-size:1em;color:var(--c);text-align:center;margin-bottom:12px;font-weight:bold;text-shadow:0 0 8px rgba(78,205,196,.35);}
+.rrgd{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+@media(max-width:480px){.rrgd{grid-template-columns:1fr;}}
+.rri{padding:7px;background:rgba(0,0,0,.16);border-radius:4px;}
+.rrl{font-size:.62em;color:var(--r);margin-bottom:2px;letter-spacing:1px;}
+.rrv{font-size:.73em;color:#ccc;line-height:1.35;}
+.rrv.g{color:var(--c);}
+.rrv.b{color:var(--r);}
+.rreset{background:transparent;border:1px solid rgba(78,205,196,.3);border-radius:4px;color:var(--c);font-family:'Share Tech Mono',monospace;padding:5px 13px;cursor:pointer;margin-top:10px;font-size:.73em;transition:all .27s;}
+.rreset:hover{background:rgba(78,205,196,.07);}
+/* phase 3 */
+#p3{text-align:center;}
+.lseq{display:flex;flex-direction:column;align-items:center;}
+.lcw{width:100%;max-width:900px;aspect-ratio:16/9;position:relative;overflow:hidden;border:2px solid rgba(78,205,196,.22);border-radius:12px;margin:0 auto;background:#000208;box-shadow:0 0 40px rgba(78,205,196,.1);}
+.lcw canvas{width:100%;height:100%;display:block;}
+/* HUD overlay rendered inside canvas; skip btn floats over */
+.skip-btn{position:absolute;top:12px;right:12px;background:rgba(5,12,24,.85);border:1.5px solid rgba(78,205,196,.4);color:var(--c);font-family:'Orbitron',sans-serif;font-size:.6em;letter-spacing:2px;padding:6px 14px;border-radius:5px;cursor:pointer;z-index:10;transition:all .2s;}
+.skip-btn:hover{background:rgba(78,205,196,.15);border-color:var(--c);}
+.atl{font-size:.65em;color:rgba(78,205,196,.45);letter-spacing:2px;margin-bottom:8px;font-family:'Orbitron',sans-serif;}
+/* dummy classes kept for JS compat */
+.lst{display:none;}.cdb{display:none;}.cdf{}
+/* dossier */
+.dos{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:22px;backdrop-filter:blur(12px);text-align:left;margin-top:13px;}
+.mb{text-align:center;padding:20px;background:rgba(78,205,196,.05);border-radius:9px;margin-bottom:20px;border:1px solid rgba(78,205,196,.14);}
+.mb h3{font-family:'Orbitron',sans-serif;color:var(--c);letter-spacing:3px;margin-bottom:9px;font-size:.75em;}
+.rnl{font-family:'Orbitron',sans-serif;font-size:1.35em;color:var(--r);margin-bottom:4px;}
+.rds{color:#606060;font-size:.78em;margin-bottom:12px;}
+.mm{color:#ccc;line-height:1.8;font-size:.8em;border-left:3px solid var(--r);padding-left:12px;}
+.cgd{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+@media(max-width:600px){.cgd{grid-template-columns:1fr;}}
+.cs{background:rgba(0,0,0,.18);border-radius:7px;padding:14px;}
+.cst{font-family:'Orbitron',sans-serif;font-size:.61em;color:var(--r);letter-spacing:2px;margin-bottom:11px;}
+.sl{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.045);font-size:.76em;}
+.sla{color:#585858;}
+.slv{color:var(--c);font-weight:bold;}
+.hb{background:rgba(255,107,107,.055);border-left:4px solid var(--r);border-radius:6px;padding:16px;margin-top:16px;}
+.hb h4{font-family:'Orbitron',sans-serif;color:var(--r);font-size:.61em;letter-spacing:2px;margin-bottom:8px;}
+.hb p{line-height:1.78;color:#ccc;font-size:.79em;}
+/* nav */
+.navb{display:flex;justify-content:center;gap:10px;margin-top:22px;flex-wrap:wrap;}
+.nbtn{background:linear-gradient(135deg,var(--c) 0%,#228880 100%);color:#fff;border:none;padding:10px 28px;font-size:.8em;font-family:'Orbitron',sans-serif;letter-spacing:2px;border-radius:6px;cursor:pointer;transition:all .27s;box-shadow:0 3px 10px rgba(78,205,196,.22);}
+.nbtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 15px rgba(78,205,196,.38);}
+.nbtn:disabled{opacity:.25;cursor:not-allowed;}
+.nbtn.d{background:linear-gradient(135deg,var(--r) 0%,#982222 100%);box-shadow:0 3px 10px rgba(255,107,107,.22);}
+.nbtn.d:hover:not(:disabled){box-shadow:0 5px 15px rgba(255,107,107,.38);}
+.nbtn.gh{background:transparent;border:1.5px solid rgba(78,205,196,.32);color:var(--c);box-shadow:none;}
+.nbtn.gh:hover:not(:disabled){background:rgba(78,205,196,.07);}
+</style>
+</head>
+<body>
+<canvas id="sf"></canvas>
+<div class="wrap">
+<div class="hdr"><h1>🚀 SPACE RACE ROCKET &amp; MISSILE BUILDER</h1>
+<div class="sub">COLD WAR ERA LAUNCH VEHICLE &amp; BALLISTIC MISSILE ENGINEERING SIMULATOR</div>
+<div style="text-align:center;color:rgba(255,215,0,0.7);font-size:.75em;letter-spacing:2px;margin-top:6px;font-family:'Share Tech Mono',monospace;">This app is created by Inno 9 Group COLD WAR (Bryan, Isaac, Liisa)</div></div>
+<div class="vb" id="vb0"></div>
+<div class="pbar">
+  <div class="pn"><div class="pd active" id="d1"></div><div class="pl">ASSEMBLY</div></div>
+  <div class="pc" id="cn1"></div>
+  <div class="pn"><div class="pd" id="d2"></div><div class="pl">PROPELLANT</div></div>
+  <div class="pc" id="cn2"></div>
+  <div class="pn"><div class="pd" id="d3"></div><div class="pl">LAUNCH</div></div>
+</div>
+
+<!-- PHASE 1 -->
+<div id="p1">
+<div class="prg-tr">
+  <div class="prg-tt">◈ DESIGN PROGRESS ◈</div>
+  <div class="prg-bs">
+    <div class="prg-it"><div class="prg-lb"><span>STRUCTURE</span><span class="ck" id="ck0">✓</span></div><div class="prg-b"><div class="prg-f" id="pf0"></div></div></div>
+    <div class="prg-it"><div class="prg-lb"><span>STAGING</span><span class="ck" id="ck1">✓</span></div><div class="prg-b"><div class="prg-f" id="pf1"></div></div></div>
+    <div class="prg-it"><div class="prg-lb"><span>GUIDANCE</span><span class="ck" id="ck2">✓</span></div><div class="prg-b"><div class="prg-f" id="pf2"></div></div></div>
+    <div class="prg-it"><div class="prg-lb"><span>FINS</span><span class="ck" id="ck3">✓</span></div><div class="prg-b"><div class="prg-f" id="pf3"></div></div></div>
+    <div class="prg-it"><div class="prg-lb"><span>DEPLOYMENT</span><span class="ck" id="ck4">✓</span></div><div class="prg-b"><div class="prg-f" id="pf4"></div></div></div>
+  </div>
+</div>
+<div class="floor">
+<div class="drawer">
+  <div class="dsec"><div class="dtt">⬡ STRUCTURAL CONFIGURATION</div>
+    <div class="opt" data-c="structure" data-v="clustered"><div class="onm">Clustered Strap-on Boosters</div><div class="ods">4 liquid-fueled pods around central core. Korolev architecture.</div><div class="otg">Rocket &amp; ICBM</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="structure" data-v="balloon"><div class="onm">Balloon Tank (Pressurized Shell)</div><div class="ods">Ultra-thin 0.25mm steel skin — collapses without internal pressure.</div><div class="otg">Rocket &amp; ICBM</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="structure" data-v="monolith"><div class="onm">Monolith Single-Body</div><div class="ods">Single robust vessel — simple, reliable, mobile-deployable.</div><div class="otg">Ballistic Missile</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="structure" data-v="multistage"><div class="onm">Multi-Stage Stack</div><div class="ods">Stacked stages, each with own engines and tanks. Separate in sequence.</div><div class="otg">ICBM &amp; Rocket</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="structure" data-v="solid"><div class="onm">Solid-Propellant Motor</div><div class="ods">Cast solid grain — no liquid plumbing, instant launch readiness.</div><div class="otg">Missile &amp; SLBM</div><span class="schk">✓</span></div>
+  </div>
+  <div class="dsec"><div class="dtt">⚙ STAGING ARCHITECTURE</div>
+    <div class="opt" data-c="staging" data-v="stage-half"><div class="onm">Stage-and-a-Half</div><div class="ods">All engines light at liftoff; boosters drop, sustainer continues.</div><div class="otg">Atlas Design</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="staging" data-v="parallel"><div class="onm">Parallel Staging</div><div class="ods">Core + strap-ons fire together; boosters jettison mid-flight (Korolev Cross).</div><div class="otg">R-7 / Soyuz</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="staging" data-v="serial"><div class="onm">Serial Staging (Cold)</div><div class="ods">Stage N+1 ignites only after stage N separates. ICBM standard.</div><div class="otg">ICBM / SLBM</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="staging" data-v="single"><div class="onm">Single Stage</div><div class="ods">One propellant load, no staging. Simpler but lower mass fraction.</div><div class="otg">MRBM / Tactical</div><span class="schk">✓</span></div>
+  </div>
+  <div class="dsec"><div class="dtt">⊕ GUIDANCE SYSTEM</div>
+    <div class="opt" data-c="guidance" data-v="inertial"><div class="onm">Inertial Platform (Gyro+Accel)</div><div class="ods">Self-contained — no external signals. ICBM gold standard.</div><div class="otg">Autonomous</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="guidance" data-v="radio"><div class="onm">Radio Command Guidance</div><div class="ods">Ground station transmits real-time corrections. Simpler but jammable.</div><div class="otg">Early Soviet</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="guidance" data-v="stellar"><div class="onm">Stellar-Inertial (Star Tracker)</div><div class="ods">Star sightings correct gyro drift in coast phase. Exceptional accuracy.</div><div class="otg">Minuteman / Polaris</div><span class="schk">✓</span></div>
+  </div>
+  <div class="dsec"><div class="dtt">▷ AEROSURFACE / FIN CONFIG</div>
+    <div class="opt" data-c="fins" data-v="large-delta"><div class="onm">Large Swept-Delta Fins ×4</div><div class="ods">Wide-chord delta planform for stability through transonic regime.</div><div class="otg">Early Missiles</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="fins" data-v="small-stub"><div class="onm">Small Stub Fins ×4</div><div class="ods">Minimal surfaces for roll control only. Low drag at altitude.</div><div class="otg">ICBM / Atlas</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="fins" data-v="none"><div class="onm">No Fins — TVC Only</div><div class="ods">Pure Thrust Vector Control via gimbaling nozzle. Required for SLBM tube.</div><div class="otg">Minuteman / Polaris</div><span class="schk">✓</span></div>
+  </div>
+  <div class="dsec"><div class="dtt">🚛 DEPLOYMENT SYSTEM</div>
+    <div class="opt" data-c="deployment" data-v="pad"><div class="onm">Fixed Launch Complex (Pad)</div><div class="ods">Permanent gantry with umbilical tower. Complex fueling infrastructure.</div><div class="otg">Space Rocket</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="deployment" data-v="silo"><div class="onm">Hardened Underground Silo</div><div class="ods">Blast-protected, pre-loaded, sub-60-second launch readiness.</div><div class="otg">Strategic ICBM</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="deployment" data-v="mobile"><div class="onm">Road-Mobile TEL Launcher</div><div class="ods">Transporter-Erector-Launcher. Concealment through mobility.</div><div class="otg">MRBM / Tactical</div><span class="schk">✓</span></div>
+    <div class="opt" data-c="deployment" data-v="submarine"><div class="onm">Submarine Cold-Launch (SLBM)</div><div class="ods">Gas-ejected from submerged tube; motor lights after surface. Ultimate deterrent.</div><div class="otg">SLBM / Polaris</div><span class="schk">✓</span></div>
+  </div>
+</div>
+<!-- BLUEPRINT SVG -->
+<div class="dt">
+  <div class="rcanv">
+    <!--
+      VIEWBOX 700x800. Rocket centerline x=350.
+      Nose tip y=72, nozzle exit y=552.
+      Main body x=310-390. Boosters x=174-228 / x=472-526.
+      CALLOUTS:
+        Structure  LEFT  y~280  box x=2-144
+        Staging    RIGHT y~350  box x=556-698
+        Guidance   RIGHT y~115  box x=556-698
+        Fins       LEFT  y~492  box x=2-144
+        Deployment RIGHT y~512  box x=556-698
+      Fins max left x=244 (delta). All leaders safely outside rocket.
+    -->
+    <svg id="svg" viewBox="0 0 700 800" width="100%" style="overflow:visible;" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="aw" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto">
+          <path d="M0,0 L5,2.5 L0,5 Z" fill="rgba(255,107,107,.42)"/>
+        </marker>
+      </defs>
+
+      <!-- BASE: always visible -->
+      <!-- NOSE y:72-190 -->
+      <g id="gN" class="rp">
+        <path class="bm" d="M350,72 C340,103 323,142 313,176 L310,190 L390,190 L387,176 C377,142 360,103 350,72 Z"/>
+        <line class="bd" x1="350" y1="72" x2="350" y2="190"/>
+        <line class="bd" x1="324" y1="128" x2="376" y2="128"/>
+        <line class="bd" x1="314" y1="165" x2="386" y2="165"/>
+        <circle class="br" cx="350" cy="76" r="2.1"/>
+      </g>
+
+      <!-- PAYLOAD y:190-240 -->
+      <g id="gPL" class="rp">
+        <rect class="bp" x="310" y="190" width="80" height="50" rx="2"/>
+        <line class="bd" x1="310" y1="209" x2="390" y2="209"/>
+        <line class="bd" x1="310" y1="228" x2="390" y2="228"/>
+        <text style="fill:rgba(78,205,196,.22);font-family:'Share Tech Mono';font-size:6.8px;" x="350" y="212" text-anchor="middle">PAYLOAD/W.H.</text>
+      </g>
+
+      <!-- BODY y:240-500 -->
+      <g id="gB" class="rp">
+        <rect class="bm" x="310" y="240" width="80" height="260" rx="2"/>
+        <line class="bd" x1="332" y1="240" x2="332" y2="500"/>
+        <line class="bd" x1="368" y1="240" x2="368" y2="500"/>
+        <line class="bd" x1="310" y1="292" x2="390" y2="292"/>
+        <line class="bd" x1="310" y1="344" x2="390" y2="344"/>
+        <line class="bd" x1="310" y1="396" x2="390" y2="396"/>
+        <line class="bd" x1="310" y1="448" x2="390" y2="448"/>
+        <rect class="bp" x="316" y="248" width="68" height="116" rx="2"/>
+        <text style="fill:rgba(78,205,196,.2);font-family:'Share Tech Mono';font-size:6.8px;" x="350" y="313" text-anchor="middle">PROPELLANT</text>
+        <circle class="br" cx="332" cy="260" r="1.6"/><circle class="br" cx="332" cy="312" r="1.6"/>
+        <circle class="br" cx="332" cy="364" r="1.6"/><circle class="br" cx="332" cy="416" r="1.6"/>
+        <circle class="br" cx="332" cy="468" r="1.6"/><circle class="br" cx="332" cy="490" r="1.6"/>
+        <circle class="br" cx="368" cy="260" r="1.6"/><circle class="br" cx="368" cy="312" r="1.6"/>
+        <circle class="br" cx="368" cy="364" r="1.6"/><circle class="br" cx="368" cy="416" r="1.6"/>
+        <circle class="br" cx="368" cy="468" r="1.6"/><circle class="br" cx="368" cy="490" r="1.6"/>
+      </g>
+
+      <!-- ENGINE y:500-552 -->
+      <g id="gE" class="rp">
+        <rect class="be" x="315" y="500" width="70" height="22" rx="2"/>
+        <line class="bd" x1="315" y1="512" x2="385" y2="512"/>
+        <circle class="br" cx="328" cy="512" r="1.3"/><circle class="br" cx="350" cy="512" r="1.3"/><circle class="br" cx="372" cy="512" r="1.3"/>
+        <circle class="br" cx="315" cy="506" r="2.4"/><circle class="br" cx="385" cy="506" r="2.4"/>
+        <path class="bn" d="M319,522 L311,540 L315,549 L329,554 L371,554 L385,549 L389,540 L381,522 Z"/>
+        <line class="bd" x1="325" y1="522" x2="322" y2="547"/>
+        <line class="bd" x1="335" y1="522" x2="333" y2="551"/>
+        <line class="bd" x1="345" y1="522" x2="343" y2="553"/>
+        <line class="bd" x1="350" y1="522" x2="350" y2="554"/>
+        <line class="bd" x1="355" y1="522" x2="357" y2="553"/>
+        <line class="bd" x1="365" y1="522" x2="367" y2="551"/>
+        <line class="bd" x1="375" y1="522" x2="378" y2="547"/>
+        <line class="bd" x1="314" y1="534" x2="386" y2="534"/>
+      </g>
+
+      <!-- CONDITIONAL PARTS -->
+      <!-- clustered boosters: LEFT x:174-228 y:252-494, RIGHT x:472-526 y:252-494 -->
+      <g id="gBst" class="rp">
+        <path class="bb" d="M182,260 Q200,250 218,260 L218,488 L182,488 Z"/>
+        <path style="fill:none;stroke:rgba(78,205,196,.6);stroke-width:1.7;" d="M182,260 Q200,250 218,260"/>
+        <line class="bd" x1="200" y1="260" x2="200" y2="488"/>
+        <line class="bd" x1="182" y1="308" x2="218" y2="308"/><line class="bd" x1="182" y1="356" x2="218" y2="356"/>
+        <line class="bd" x1="182" y1="404" x2="218" y2="404"/><line class="bd" x1="182" y1="452" x2="218" y2="452"/>
+        <circle class="br" cx="200" cy="276" r="1.4"/><circle class="br" cx="200" cy="326" r="1.4"/>
+        <circle class="br" cx="200" cy="376" r="1.4"/><circle class="br" cx="200" cy="426" r="1.4"/>
+        <path class="bn" d="M184,488 L178,502 L182,509 L193,513 L207,513 L218,509 L222,502 L216,488 Z"/>
+        <line class="bd" x1="218" y1="296" x2="310" y2="288"/>
+        <line class="bd" x1="218" y1="424" x2="310" y2="416"/>
+        <path class="bb" d="M482,260 Q500,250 518,260 L518,488 L482,488 Z"/>
+        <path style="fill:none;stroke:rgba(78,205,196,.6);stroke-width:1.7;" d="M482,260 Q500,250 518,260"/>
+        <line class="bd" x1="500" y1="260" x2="500" y2="488"/>
+        <line class="bd" x1="482" y1="308" x2="518" y2="308"/><line class="bd" x1="482" y1="356" x2="518" y2="356"/>
+        <line class="bd" x1="482" y1="404" x2="518" y2="404"/><line class="bd" x1="482" y1="452" x2="518" y2="452"/>
+        <circle class="br" cx="500" cy="276" r="1.4"/><circle class="br" cx="500" cy="326" r="1.4"/>
+        <circle class="br" cx="500" cy="376" r="1.4"/><circle class="br" cx="500" cy="426" r="1.4"/>
+        <path class="bn" d="M484,488 L478,502 L482,509 L493,513 L507,513 L518,509 L522,502 L516,488 Z"/>
+        <line class="bd" x1="482" y1="296" x2="390" y2="288"/>
+        <line class="bd" x1="482" y1="424" x2="390" y2="416"/>
+      </g>
+
+      <!-- multistage ring y:338-356 -->
+      <g id="gMS" class="rp">
+        <rect class="bp" x="305" y="338" width="90" height="18" rx="2"/>
+        <text style="fill:rgba(78,205,196,.4);font-family:'Share Tech Mono';font-size:6.8px;" x="350" y="351" text-anchor="middle">STAGE 1/2 SEP.</text>
+      </g>
+
+      <!-- solid grain in aft body y:394-494 -->
+      <g id="gSG" class="rp">
+        <rect class="bs" x="316" y="394" width="68" height="100" rx="2"/>
+        <line class="bd" x1="324" y1="410" x2="376" y2="410"/><line class="bd" x1="324" y1="428" x2="376" y2="428"/>
+        <line class="bd" x1="324" y1="446" x2="376" y2="446"/><line class="bd" x1="324" y1="464" x2="376" y2="464"/>
+        <text style="fill:rgba(255,165,0,.35);font-family:'Share Tech Mono';font-size:6.8px;" x="350" y="486" text-anchor="middle">SOLID GRAIN</text>
+      </g>
+
+      <!-- inertial IMU in payload -->
+      <g id="gGI" class="rp">
+        <rect class="bp" x="334" y="197" width="32" height="24" rx="2"/>
+        <circle class="bd" cx="350" cy="209" r="7"/>
+        <line class="bd" x1="343" y1="209" x2="357" y2="209"/>
+        <line class="bd" x1="350" y1="202" x2="350" y2="216"/>
+        <circle class="br" cx="350" cy="209" r="2.1"/>
+      </g>
+
+      <!-- radio antenna above nose -->
+      <g id="gGR" class="rp">
+        <line style="stroke:rgba(78,205,196,.75);stroke-width:1.9;" x1="350" y1="72" x2="350" y2="49"/>
+        <line style="stroke:rgba(78,205,196,.52);stroke-width:1.1;" x1="350" y1="58" x2="338" y2="45"/>
+        <line style="stroke:rgba(78,205,196,.52);stroke-width:1.1;" x1="350" y1="58" x2="362" y2="45"/>
+        <circle class="br" cx="338" cy="44" r="2"/><circle class="br" cx="362" cy="44" r="2"/><circle class="br" cx="350" cy="48" r="2.4"/>
+      </g>
+
+      <!-- stellar tracker window on nose left side -->
+      <g id="gGS" class="rp">
+        <path class="bp" d="M322,143 Q330,131 341,131 Q348,131 348,138 Q341,146 330,146 Z"/>
+        <circle class="br" cx="330" cy="121" r="1.3"/>
+        <circle class="br" cx="322" cy="128" r="1.1"/>
+        <circle class="br" cx="337" cy="125" r="1.1"/>
+      </g>
+
+      <!-- large delta fins y:442-552 extend left to x=244, right x=456 -->
+      <g id="gFD" class="rp">
+        <polygon class="bf" points="310,442 244,552 310,552"/>
+        <line class="bd" x1="310" y1="442" x2="248" y2="543"/>
+        <line class="bd" x1="310" y1="478" x2="260" y2="546"/>
+        <polygon class="bf" points="390,442 456,552 390,552"/>
+        <line class="bd" x1="390" y1="442" x2="452" y2="543"/>
+        <line class="bd" x1="390" y1="478" x2="440" y2="546"/>
+      </g>
+
+      <!-- small stub fins y:468-534, x:272/428 -->
+      <g id="gFS" class="rp">
+        <polygon class="bf" points="310,468 274,534 310,534"/>
+        <line class="bd" x1="310" y1="468" x2="277" y2="526"/>
+        <polygon class="bf" points="390,468 426,534 390,534"/>
+        <line class="bd" x1="390" y1="468" x2="423" y2="526"/>
+      </g>
+
+      <!-- parallel staging separation arcs (outside boosters only) -->
+      <g id="gSTP" class="rp">
+        <line style="stroke:rgba(255,107,107,.38);stroke-width:1.1;stroke-dasharray:5,3;" x1="174" y1="488" x2="228" y2="488"/>
+        <line style="stroke:rgba(255,107,107,.38);stroke-width:1.1;stroke-dasharray:5,3;" x1="472" y1="488" x2="526" y2="488"/>
+        <path style="fill:none;stroke:rgba(255,107,107,.35);stroke-width:1.1;" d="M176,490 L156,512" marker-end="url(#aw)"/>
+        <path style="fill:none;stroke:rgba(255,107,107,.35);stroke-width:1.1;" d="M524,490 L544,512" marker-end="url(#aw)"/>
+      </g>
+
+      <!-- serial staging ring -->
+      <g id="gSTS" class="rp">
+        <rect class="bp" x="305" y="344" width="90" height="12" rx="2"/>
+        <text style="fill:rgba(78,205,196,.36);font-family:'Share Tech Mono';font-size:6.8px;" x="350" y="354" text-anchor="middle">STAGE SEP RING</text>
+      </g>
+
+      <!-- silo walls x:270-430 y:192-574 -->
+      <g id="gDS" class="rp">
+        <rect style="fill:rgba(30,55,75,.07);stroke:rgba(78,205,196,.26);stroke-width:1.7;stroke-dasharray:7,4;" x="274" y="196" width="152" height="372" rx="3"/>
+        <text style="fill:rgba(78,205,196,.22);font-family:'Share Tech Mono';font-size:6.8px;" x="350" y="580" text-anchor="middle">SILO WALLS</text>
+        <line style="stroke:rgba(78,205,196,.3);stroke-width:2.2;" x1="260" y1="570" x2="440" y2="570"/>
+        <line style="stroke:rgba(78,205,196,.18);stroke-width:1.4;" x1="252" y1="576" x2="448" y2="576"/>
+      </g>
+
+      <!-- submarine tube x:285-415 y:186-576 -->
+      <g id="gDSB" class="rp">
+        <rect style="fill:rgba(18,45,75,.09);stroke:rgba(78,205,196,.3);stroke-width:1.7;stroke-dasharray:5,4;" x="287" y="188" width="126" height="386" rx="3"/>
+        <text style="fill:rgba(78,205,196,.26);font-family:'Share Tech Mono';font-size:6.8px;" x="350" y="588" text-anchor="middle">LAUNCH TUBE (SUB)</text>
+        <line style="stroke:rgba(78,205,196,.26);stroke-width:1.3;stroke-dasharray:3,3;" x1="287" y1="572" x2="413" y2="572"/>
+      </g>
+
+      <!-- mobile TEL erector arm (far left, no overlap) x-range: 212-320 y:500-640 -->
+      <g id="gDM" class="rp">
+        <line style="stroke:rgba(78,205,196,.3);stroke-width:1.8;" x1="310" y1="550" x2="230" y2="625"/>
+        <line style="stroke:rgba(78,205,196,.25);stroke-width:1.4;" x1="310" y1="510" x2="240" y2="570"/>
+        <line style="stroke:rgba(78,205,196,.32);stroke-width:2.2;" x1="215" y1="627" x2="312" y2="627"/>
+        <line style="stroke:rgba(78,205,196,.2);stroke-width:1.3;" x1="200" y1="633" x2="326" y2="633"/>
+        <text style="fill:rgba(78,205,196,.24);font-family:'Share Tech Mono';font-size:6.8px;" x="256" y="647" text-anchor="middle">TEL PLATFORM</text>
+      </g>
+
+      <!-- CALLOUTS — strictly in annotation zones, no overlap with rocket or fins -->
+      <g class="cg" id="cgStr">
+        <line class="cl" x1="310" y1="286" x2="148" y2="273"/>
+        <rect class="cb" x="2" y="257" width="144" height="42" rx="2"/>
+        <text class="ch" x="10" y="272">STRUCTURE</text>
+        <text class="cv" id="lStr" x="10" y="288">—</text>
+      </g>
+      <g class="cg" id="cgStg">
+        <line class="cl" x1="390" y1="363" x2="554" y2="351"/>
+        <rect class="cb" x="556" y="335" width="142" height="42" rx="2"/>
+        <text class="ch" x="564" y="350">STAGING</text>
+        <text class="cv" id="lStg" x="564" y="367">—</text>
+      </g>
+      <g class="cg" id="cgGui">
+        <line class="cl" x1="390" y1="120" x2="554" y2="113"/>
+        <rect class="cb" x="556" y="97" width="142" height="42" rx="2"/>
+        <text class="ch" x="564" y="112">GUIDANCE</text>
+        <text class="cv" id="lGui" x="564" y="129">—</text>
+      </g>
+      <g class="cg" id="cgFin">
+        <line class="cl" x1="246" y1="494" x2="148" y2="494"/>
+        <rect class="cb" x="2" y="478" width="144" height="42" rx="2"/>
+        <text class="ch" x="10" y="493">FINS / CTRL</text>
+        <text class="cv" id="lFin" x="10" y="510">—</text>
+      </g>
+      <g class="cg" id="cgDep">
+        <line class="cl" x1="390" y1="515" x2="554" y2="520"/>
+        <rect class="cb" x="556" y="504" width="142" height="42" rx="2"/>
+        <text class="ch" x="564" y="519">DEPLOYMENT</text>
+        <text class="cv" id="lDep" x="564" y="536">—</text>
+      </g>
+
+      <!-- dimension line far left x=140 -->
+      <g style="opacity:.13">
+        <line style="stroke:rgba(78,205,196,1);stroke-width:1;" x1="140" y1="72" x2="140" y2="554"/>
+        <line style="stroke:rgba(78,205,196,1);stroke-width:1;" x1="134" y1="72" x2="146" y2="72"/>
+        <line style="stroke:rgba(78,205,196,1);stroke-width:1;" x1="134" y1="554" x2="146" y2="554"/>
+        <text style="fill:rgba(78,205,196,1);font-family:'Share Tech Mono';font-size:7.5px;" x="134" y="318" text-anchor="end" transform="rotate(-90,134,318)">FULL HEIGHT</text>
+      </g>
+      <!-- centerline -->
+      <line style="stroke:rgba(78,205,196,.07);stroke-width:1;stroke-dasharray:6,5;" x1="350" y1="56" x2="350" y2="558"/>
+    </svg>
+  </div>
+  <div class="ast" id="ast">Select components from the left panel to begin blueprint assembly</div>
+</div>
+</div>
+</div><!-- /p1 -->
+
+<!-- PHASE 2 -->
+<div id="p2" class="hidden">
+  <div class="vb" id="vb2"></div>
+  <div class="lhdr"><h2>⚗ PROPELLANT CHEMISTRY LAB</h2><div style="color:#404040;font-size:.73em;letter-spacing:2px;margin-top:4px;">SELECT FUEL + OXIDIZER — THEN IGNITE</div></div>
+  <div class="lgrid">
+    <div class="mshelf"><div class="sht">◈ FUEL COMPOUNDS</div>
+      <div class="mgrid">
+        <div class="mol" data-mt="fuel" data-mv="rp1"><div class="mf">RP-1</div><div class="mn">Refined Kerosene</div><div class="mt">Hydrocarbon</div></div>
+        <div class="mol" data-mt="fuel" data-mv="lh2"><div class="mf">LH₂</div><div class="mn">Liquid Hydrogen</div><div class="mt">Cryogenic</div></div>
+        <div class="mol" data-mt="fuel" data-mv="udmh"><div class="mf">UDMH</div><div class="mn">Unsym. Dimethylhydrazine</div><div class="mt">Hypergolic</div></div>
+        <div class="mol" data-mt="fuel" data-mv="hydrazine"><div class="mf">N₂H₄</div><div class="mn">Hydrazine</div><div class="mt">Storable</div></div>
+        <div class="mol" data-mt="fuel" data-mv="solid"><div class="mf">HTPB</div><div class="mn">Solid Propellant Grain</div><div class="mt">Pre-Mixed</div></div>
+      </div>
+    </div>
+    <div class="mshelf"><div class="sht">◈ OXIDIZER COMPOUNDS</div>
+      <div class="mgrid">
+        <div class="mol" data-mt="oxidizer" data-mv="lox"><div class="mf">LOX</div><div class="mn">Liquid Oxygen</div><div class="mt">Cryogenic</div></div>
+        <div class="mol" data-mt="oxidizer" data-mv="n2o4"><div class="mf">N₂O₄</div><div class="mn">Nitrogen Tetroxide</div><div class="mt">Storable</div></div>
+        <div class="mol" data-mt="oxidizer" data-mv="irfna"><div class="mf">IRFNA</div><div class="mn">Red Fuming Nitric Acid</div><div class="mt">Early Storable</div></div>
+        <div class="mol" data-mt="oxidizer" data-mv="ap"><div class="mf">AP</div><div class="mn">Ammonium Perchlorate</div><div class="mt">Solid Oxidizer</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="rxb">
+    <div class="rxbt">⚡ COMBUSTION TEST CHAMBER</div>
+    <div class="rxsl">
+      <div class="rxs" id="sF"><div class="ssl">FUEL</div><div class="ssf" id="sfF">—</div><div class="ssn" id="sfN">Select above</div></div>
+      <div class="ps">+</div>
+      <div class="rxs" id="sO"><div class="ssl">OXIDIZER</div><div class="ssf" id="soF">—</div><div class="ssn" id="soN">Select above</div></div>
+    </div>
+    <button class="rigbtn" id="rigBtn" disabled onclick="testRx()">▶ IGNITE &amp; ANALYZE</button>
+    <div id="rxResult" class="hidden"></div>
+  </div>
+</div>
+
+<!-- PHASE 3 -->
+<div id="p3" class="hidden">
+  <div class="vb" id="vb3"></div>
+  <div class="lseq">
+    <div id="lAnimSec">
+      <div class="atl" id="atl">LAUNCH ANIMATION</div>
+      <div class="lcw" style="position:relative;">
+        <canvas id="lc" width="1280" height="720"></canvas>
+        <button class="skip-btn" id="skipBtn" onclick="skipAnim()">SKIP →</button>
+      </div>
+    </div>
+    <div id="dos" class="dos hidden"></div>
+  </div>
+</div>
+
+<div class="navb">
+  <button class="nbtn gh hidden" id="bkBtn">← BACK</button>
+  <button class="nbtn" id="nxBtn" disabled>NEXT PHASE →</button>
+  <button class="nbtn d hidden" id="lnBtn">🚀 LAUNCH SEQUENCE</button>
+  <button class="nbtn gh hidden" id="rsBtn">↺ BUILD ANOTHER</button>
+</div>
+</div><!-- /wrap -->
+
+<script>
+/* ── GLOBALS (declared before any function that uses them) ── */
+var animRAF = null;
+var selF = null, selO = null;
+var _rk = null, _hudPct = 0, _hudMsg = 'LAUNCH SEQUENCE INITIATED';
+var S = {ph:1, sel:{structure:null,staging:null,guidance:null,fins:null,deployment:null}, ft:null, tested:false};
+
+/* STARFIELD */
+(function(){
+  var c=document.getElementById('sf'), x=c.getContext('2d');
+  function resize(){c.width=innerWidth;c.height=innerHeight;}
+  resize(); window.addEventListener('resize',resize);
+  var stars=[];
+  for(var i=0;i<180;i++) stars.push({x:Math.random(),y:Math.random(),r:.3+Math.random()*1.2,p:Math.random()*6.28,sp:.0004+Math.random()*.001});
+  var t=0;
+  (function loop(){
+    t++;x.clearRect(0,0,c.width,c.height);
+    stars.forEach(function(v){
+      var a=.2+.75*Math.abs(Math.sin(v.p+t*v.sp));
+      x.beginPath();x.arc(v.x*c.width,v.y*c.height,v.r,0,6.28);
+      x.fillStyle='rgba(200,220,255,'+a.toFixed(2)+')';x.fill();
+    });
+    requestAnimationFrame(loop);
+  })();
+})();
+
+/* VEHICLE TYPE */
+function getVT(){
+  const{structure:st,staging:sg,deployment:dp}=S.sel;
+  if(!st&&!sg&&!dp)return null;
+  if(dp==='submarine')return{l:'🎯 SUBMARINE-LAUNCHED BALLISTIC MISSILE (SLBM)',c:'mis'};
+  if(st==='clustered'||sg==='parallel')return{l:'🚀 SPACE ROCKET + ICBM (DUAL USE)',c:'both'};
+  if(st==='balloon'||sg==='stage-half')return{l:'🚀 SPACE LAUNCH VEHICLE (ROCKET)',c:'rkt'};
+  if(st==='solid')return{l:'🎯 SOLID-FUEL BALLISTIC MISSILE (ICBM)',c:'mis'};
+  if(dp==='silo')return{l:'🎯 SILO-BASED INTERCONTINENTAL BALLISTIC MISSILE',c:'mis'};
+  if(dp==='mobile')return{l:'🎯 MOBILE BALLISTIC MISSILE (MRBM/IRBM)',c:'mis'};
+  return{l:'🎯 BALLISTIC MISSILE',c:'mis'};
+}
+function renderVT(){
+  const v=getVT();
+  ['vb0','vb2','vb3'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=v?`<span class="vbadge ${v.c}">${v.l}</span>`:''});
+}
+
+/* ROCKET DB */
+const RDB={
+r7:{name:'R-7 Semyorka',desig:'8K71 / SS-6 Sapwood',nation:'Soviet Union 🔴',yr:'1957',vtype:'Space Rocket & ICBM (Dual Use)',at:'rocket',
+  match:"Your clustered strap-on booster design with parallel staging and RP-1/LOX matches the R-7 Semyorka — the world's first ICBM and the rocket that launched Sputnik 1. The four booster pods firing simultaneously created the iconic 'Korolev Cross' at stage separation.",
+  specs:{'Height':'34 m','Base Width':'10.3 m (w/ boosters)','Launch Mass':'280,000 kg','Thrust (SL)':'3,900 kN','Range':'8,800 km','Propellant':'RP-1 / LOX','Type':'Space Rocket / ICBM'},
+  ch:['Clustered Strap-ons','Parallel Staging','Inertial or Radio','Delta Fins','Fixed Pad'],
+  desc:'Designed by Korolev OKB-1, powered by Glushko RD-107/108 engines. Too complex for operational ICBM service but found immortality as a space launcher. Direct descendants still fly today as Soyuz-2.',
+  hist:'Oct 4, 1957: an R-7 launched Sputnik 1 and began the Space Age. Over 1,900 R-7-family launches have followed — more than any other orbital rocket family. Every Soviet cosmonaut from Gagarin to present flew on derivatives.'},
+atlas:{name:'SM-65 Atlas',desig:'Atlas D / Mercury-Atlas',nation:'United States 🇺🇸',yr:'1959',vtype:'Space Rocket & ICBM (Dual Use)',at:'rocket',
+  match:"Your balloon tank construction with stage-and-a-half staging and RP-1/LOX matches the SM-65 Atlas. Karel Bossart's genius: 0.25mm pressurized steel tanks that collapse under their own weight without internal pressure — the most extreme mass ratio rocket of its era.",
+  specs:{'Height':'22.9 m','Diameter':'3.05 m','Launch Mass':'120,000 kg','Thrust (SL)':'1,600 kN','Range':'14,500 km','Propellant':'RP-1 / LOX','Type':'Space Rocket / ICBM'},
+  ch:['Balloon Tank','Stage-and-a-Half','Inertial','Stub Fins','Pad or Silo'],
+  desc:'All three engines (two MA-3 boosters + one sustainer) ignite at liftoff. Boosters drop; sustainer continues. The balloon tank requires constant pressurization or it crumples on the pad.',
+  hist:"America's primary ICBM 1959–65. Launched all four Mercury orbital missions including John Glenn (Feb 1962). Atlas V derivatives still launch today — one of history's most reliable rocket families."},
+r12:{name:'R-12 Dvina',desig:'8K63 / SS-4 Sandal',nation:'Soviet Union 🔴',yr:'1959',vtype:'Ballistic Missile (MRBM)',at:'missile',
+  match:'Your single-stage monolith body with mobile deployment and storable hypergolic propellants matches the R-12 Dvina — the Soviet MRBM secretly deployed to Cuba in October 1962. Storable UDMH/IRFNA hypergolics meant it could remain fueled for months.',
+  specs:{'Height':'22.8 m','Diameter':'1.65 m','Launch Mass':'42,000 kg','Thrust':'740 kN','Range':'2,000 km','Propellant':'UDMH / IRFNA','Type':'MRBM'},
+  ch:['Monolith Body','Single Stage','Radio or Inertial','Delta Fins','Mobile TEL'],
+  desc:"Yangel's OKB-586. Storable UDMH/IRFNA hypergolics ignite on contact — no igniter needed, months of fueled readiness. Deployed from dispersed mobile and fixed sites.",
+  hist:'The Cuban Missile Crisis: 36 R-12s secretly deployed to Cuba could reach most U.S. cities with thermonuclear warheads. Discovery by U-2 triggered 13 days that brought humanity closest to nuclear war. The removal deal remained classified until the 1990s.'},
+jupiter:{name:'PGM-19 Jupiter',desig:'SM-78 IRBM',nation:'United States 🇺🇸',yr:'1958',vtype:'Ballistic Missile (IRBM)',at:'missile',
+  match:'Your monolith body with mobile TEL and RP-1/LOX matches the PGM-19 Jupiter — the U.S. Army IRBM by Wernher von Braun. Fifteen Jupiters in Turkey became the Cold War\'s most consequential secret bargaining chip.',
+  specs:{'Height':'18.3 m','Diameter':'2.67 m','Launch Mass':'50,000 kg','Thrust':'667 kN','Range':'2,400 km','Propellant':'RP-1 / LOX','Type':'IRBM'},
+  ch:['Monolith Body','Single Stage','Inertial','Delta Fins','Mobile TEL'],
+  desc:'Developed by Army Ballistic Missile Agency under von Braun (former V-2 engineer). Rocketdyne LR79 engine. Cryogenic LOX required pre-launch fueling, limiting rapid response despite mobile concept.',
+  hist:"Deployed to Italy and Turkey 1961–63. Kennedy secretly agreed to withdraw 15 Turkish Jupiters in exchange for Soviet Cuba withdrawal — this deal remained classified until the 1990s."},
+titan2:{name:'Titan II ICBM',desig:'LGM-25C',nation:'United States 🇺🇸',yr:'1963',vtype:'Intercontinental Ballistic Missile (ICBM)',at:'missile',
+  match:'Your multi-stage serial configuration with silo deployment and storable UDMH/N₂O₄ hypergolics matches the Titan II — America\'s most powerful land-based ICBM. Storable propellants enabled 60-second launch readiness from hardened silos.',
+  specs:{'Height':'31.4 m','Diameter':'3.05 m','Launch Mass':'154,000 kg','Thrust (Stg 1)':'1,900 kN','Range':'15,000+ km','Propellant':'UDMH / N₂O₄','Type':'ICBM'},
+  ch:['Multi-Stage Stack','Serial Staging','Inertial','Stub Fins','Hardened Silo'],
+  desc:'Aerojet hypergolic engines self-ignite on contact — no igniter. Carried 9-megaton W53 warhead, the most powerful in the U.S. arsenal.',
+  hist:'Core of U.S. deterrent through the 1960s–70s. Launched all 10 Gemini crewed missions 1964–66. A 1980 silo accident in Arkansas scattered a W53 warhead. Retired from ICBM service 1987.'},
+minuteman:{name:'LGM-30 Minuteman I',desig:'Minuteman I/II/III',nation:'United States 🇺🇸',yr:'1962',vtype:'Solid-Fuel ICBM',at:'missile',
+  match:'Your solid-propellant motor with serial staging, silo deployment, and stellar-inertial guidance matches the Minuteman I — the solid-fuel ICBM that transformed nuclear deterrence. No fueling meant indefinite readiness and sub-60-second launch.',
+  specs:{'Height':'18 m','Diameter':'1.67 m','Launch Mass':'29,500 kg','Thrust (Stg 1)':'912 kN','Range':'10,000+ km','Propellant':'Solid (HTPB/AP)','Type':'Solid ICBM'},
+  ch:['Solid Motor','Serial Staging','Stellar-Inertial','No Fins / TVC','Hardened Silo'],
+  desc:"Boeing three-stage solid rocket with Thrust Vector Control — gimbaling nozzles, no fins needed. Star-tracker guidance. Two-person launch crews in blast-hardened capsules each controlled 10 missiles.",
+  hist:'Still deployed today. Minuteman III is the only U.S. land-based ICBM. Missiles sitting in silos in Montana, Wyoming, and North Dakota right now are modernized Minuteman IIIs.'},
+r16:{name:'R-16 (SS-7 Saddler)',desig:'8K64',nation:'Soviet Union 🔴',yr:'1961',vtype:'Intercontinental Ballistic Missile (ICBM)',at:'missile',
+  match:"Your multi-stage configuration with storable UDMH/N₂O₄ hypergolics matches the R-16 — the USSR's first successful storable ICBM. Yangel designed it as a practical military-ready alternative to Korolev's cryogenic R-7.",
+  specs:{'Height':'34.4 m','Diameter':'3 m','Launch Mass':'141,000 kg','Thrust (Stg 1)':'2,270 kN','Range':'11,000–13,000 km','Propellant':'UDMH / N₂O₄','Type':'ICBM'},
+  ch:['Multi-Stage Stack','Serial Staging','Inertial','Small Fins','Silo or Mobile'],
+  desc:"Yangel's R-16 used storable hypergolics for weeks-long fueled readiness — far faster than the cryogenic R-7 which needed 20 hours of fueling.",
+  hist:'Inaugurated by catastrophe: Nedelin disaster (Oct 24, 1960) — premature Stage 2 ignition test killed 100+ engineers and Marshal Nedelin himself. Despite this, entered service and formed core of Soviet ICBM forces.'},
+polaris:{name:'UGM-27 Polaris A-1',desig:'Polaris A1/A2/A3',nation:'United States 🇺🇸',yr:'1960',vtype:'Submarine-Launched Ballistic Missile (SLBM)',at:'submarine',
+  match:"Your solid-propellant, no-fin, submarine cold-launch with stellar-inertial guidance matches the Polaris A-1 — the world's first SLBM. Completing the nuclear triad, Polaris submarines could strike from anywhere in the world's oceans — impossible to pre-emptively destroy.",
+  specs:{'Height':'8.7 m','Diameter':'1.37 m','Launch Mass':'13,600 kg','Thrust':'200 kN','Range':'2,200 km (A-1)','Propellant':'2-stage Solid','Type':'SLBM'},
+  ch:['Solid Motor','Serial Staging','Stellar-Inertial','No Fins / TVC','Sub Cold-Launch'],
+  desc:'Cold-launch: steam ejects missile from submerged tube; motor ignites after clearing water. Protects submarine from blast. Launched from George Washington-class submarines (16 missiles each).',
+  hist:'First submerged launch: USS George Washington, July 20, 1960. A submarine at patrol depth cannot be targeted before launch. Concept evolved into Poseidon, Trident I, and the current Trident II D5 still deployed today.'},
+r36:{name:'R-36 (SS-9 Scarp)',desig:'8K67',nation:'Soviet Union 🔴',yr:'1967',vtype:'Heavy Intercontinental Ballistic Missile (ICBM)',at:'missile',
+  match:'Your multi-stage serial stack with stellar-inertial guidance, UDMH/N₂O₄ hypergolics, and silo deployment matches the R-36 — the USSR\'s heaviest Cold War ICBM. Its throw-weight could carry a 20-megaton warhead or early MIRV clusters.',
+  specs:{'Height':'32 m','Diameter':'3 m','Launch Mass':'183,000 kg','Thrust (Stg 1)':'4,600 kN','Range':'12,000–16,000 km','Propellant':'UDMH / N₂O₄','Type':'Heavy ICBM'},
+  ch:['Multi-Stage Stack','Serial Staging','Stellar-Inertial','No Fins','Hardened Silo'],
+  desc:"Yuzhnoye Bureau's R-36. Enormous throw-weight allowed single 20-megaton warhead (1,300× Hiroshima) or MIRV — multiple independently-targeted re-entry vehicles threatening multiple cities per launch.",
+  hist:"NATO codenamed it 'Scarp'. SALT I specifically limited heavy ICBMs. Successor R-36M 'Satan' prompted renewed arms control debate. RS-28 Sarmat entering service now is its direct descendant."}
+};
+
+/* REACTIONS */
+const RXN={
+'rp1+lox':{type:'hydrocarbon-lox',eq:'2(CH₂)n + 3O₂ → 2CO₂ + 2H₂O',isp:'300s (SL) / 350s (vac)',perf:'High Thrust · Dense Propellant',stor:'LOX cryogenic −183°C — fuel before launch',adv:'Dense, proven, high thrust, affordable',dis:'Cryogenic LOX limits military rapid-reaction readiness',used:'R-7, Atlas, Saturn, Jupiter, Falcon 9'},
+'lh2+lox':{type:'hydrogen-lox',eq:'2H₂ + O₂ → 2H₂O',isp:'385s (SL) / 455s (vac)',perf:'Highest Isp of Any Chemical Propellant',stor:'Both cryogenic — LH₂ at −253°C, extreme boil-off',adv:'Highest Isp, clean H₂O exhaust, ideal upper stages',dis:'Very low density → huge tanks, complex handling',used:'Saturn V upper stages, Shuttle SSME, Delta IV, SLS'},
+'udmh+n2o4':{type:'hypergolic',eq:'2(CH₃)₂NNH₂ + N₂O₄ → N₂ + CO₂ + H₂O',isp:'270s (SL) / 340s (vac)',perf:'Instant Hypergolic Ignition · Storable',stor:'Both storable at room temp — months to years ready',adv:'Self-igniting, no igniter, long-term storage, rapid response',dis:'Highly toxic and carcinogenic — full HazMat required',used:'R-16, R-36, Titan II, Proton, Long March'},
+'hydrazine+n2o4':{type:'hypergolic',eq:'2N₂H₄ + N₂O₄ → 3N₂ + 4H₂O',isp:'260s (SL) / 330s (vac)',perf:'Reliable Hypergolic · Spacecraft Grade',stor:'Both storable — preferred for spacecraft thrusters',adv:'Hypergolic, highly reliable, extensively flight-proven',dis:'Lower Isp than UDMH/N₂O₄, still highly toxic',used:'Gemini, Apollo SM/LM, Dragon, Delta upper stages'},
+'udmh+irfna':{type:'early-hypergolic',eq:'UDMH + IRFNA → N₂ + CO₂ + HF + H₂O',isp:'248s (SL) / 310s (vac)',perf:'Early Storable Hypergolic · Lower Performance',stor:'Both storable — IRFNA extremely corrosive to tanks',adv:'Storable, first-generation hypergolic, reliable ignition',dis:'Lower Isp, IRFNA corrodes tanks over time, very toxic',used:'R-12 (early versions), Soviet tactical missile programs'},
+'solid+ap':{type:'solid',eq:'HTPB + 70% NH₄ClO₄ → CO₂ + H₂O + HCl',isp:'250s (SL) / 280s (vac)',perf:'Instant Readiness · Cannot Throttle · High Reliability',stor:'Pre-cast grain stored in motor for 10–20 years',adv:'Instant launch, no fueling, simplest operation, low cost',dis:'Cannot throttle or shut down after ignition, HCl exhaust',used:'Minuteman, Polaris, Poseidon, Trident, Pershing, Scout'}
+};
+
+/* PART MAP */
+const PM={
+structure:{clustered:['gBst'],balloon:[],monolith:[],multistage:['gMS'],solid:['gSG']},
+staging:{'stage-half':[],parallel:['gSTP'],serial:['gSTS'],single:[]},
+guidance:{inertial:['gGI'],radio:['gGR'],stellar:['gGS']},
+fins:{'large-delta':['gFD'],'small-stub':['gFS'],none:[]},
+deployment:{pad:[],silo:['gDS'],mobile:['gDM'],submarine:['gDSB']}
+};
+const AOP=['gBst','gMS','gSG','gSTP','gSTS','gGI','gGR','gGS','gFD','gFS','gDS','gDM','gDSB'];
+const CLL={
+structure:{clustered:'Clustered Boosters',balloon:'Balloon Tank',monolith:'Monolith Body',multistage:'Multi-Stage Stack',solid:'Solid Motor'},
+staging:{'stage-half':'Stage-and-Half',parallel:'Parallel (Korolev)',serial:'Serial Staging',single:'Single Stage'},
+guidance:{inertial:'Inertial IMU',radio:'Radio Command',stellar:'Stellar-Inertial'},
+fins:{'large-delta':'Large Delta Fins','small-stub':'Small Stub Fins',none:'No Fins / TVC'},
+deployment:{pad:'Fixed Launch Pad',silo:'Hardened Silo',mobile:'Mobile TEL',submarine:'Sub Cold-Launch'}
+};
+
+/* INIT */
+window.addEventListener('DOMContentLoaded',()=>{
+['gN','gPL','gB','gE'].forEach((id,i)=>setTimeout(()=>{const e=document.getElementById(id);if(e)e.classList.add('on');},90+i*85));
+initSel();initChem();initNav();
+});
+
+/* PHASE 1 */
+function initSel(){
+document.querySelectorAll('.opt').forEach(o=>{
+  o.addEventListener('click',()=>{
+    const c=o.dataset.c,v=o.dataset.v;
+    document.querySelectorAll(`[data-c="${c}"]`).forEach(x=>x.classList.remove('sel'));
+    o.classList.add('sel');S.sel[c]=v;
+    const ci=['structure','staging','guidance','fins','deployment'].indexOf(c);
+    const pf=document.getElementById(`pf${ci}`),ck=document.getElementById(`ck${ci}`);
+    if(pf)pf.classList.add('full');if(ck)ck.classList.add('v');
+    const cids={structure:'cgStr',staging:'cgStg',guidance:'cgGui',fins:'cgFin',deployment:'cgDep'};
+    const lids={structure:'lStr',staging:'lStg',guidance:'lGui',fins:'lFin',deployment:'lDep'};
+    const cg=document.getElementById(cids[c]),lb=document.getElementById(lids[c]);
+    if(cg)cg.classList.add('on');if(lb)lb.textContent=CLL[c]?.[v]||v;
+    AOP.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('on');});
+    Object.keys(S.sel).forEach(k=>{const vv=S.sel[k];if(!vv)return;(PM[k]?.[vv]||[]).forEach(id=>{const e=document.getElementById(id);if(e)setTimeout(()=>e.classList.add('on'),50);});});
+    const done=Object.values(S.sel).filter(Boolean).length;
+    const ast=document.getElementById('ast');
+    if(ast)ast.innerHTML=done===5?'<span class="sh">✓ ALL SYSTEMS NOMINAL</span> — Proceed to propellant lab':`<span class="sh">${done}/5</span> systems configured`;
+    renderVT();document.getElementById('nxBtn').disabled=done<5;
+  });
+});
+}
+
+/* PHASE 2 */
+function initChem(){
+document.querySelectorAll('.mol').forEach(m=>{
+  m.addEventListener('click',()=>{
+    const mt=m.dataset.mt,mv=m.dataset.mv;
+    document.querySelectorAll(`[data-mt="${mt}"]`).forEach(x=>x.classList.remove('sm'));
+    m.classList.add('sm');
+    if(mt==='fuel'){selF=mv;document.getElementById('sF').classList.add('fl');document.getElementById('sfF').textContent=m.querySelector('.mf').textContent;document.getElementById('sfN').textContent=m.querySelector('.mn').textContent;}
+    else{selO=mv;document.getElementById('sO').classList.add('fl');document.getElementById('soF').textContent=m.querySelector('.mf').textContent;document.getElementById('soN').textContent=m.querySelector('.mn').textContent;}
+    document.getElementById('rigBtn').disabled=!(selF&&selO);
+  });
+});
+}
+function testRx(){
+const k=`${selF}+${selO}`,rx=RXN[k],box=document.getElementById('rxResult');
+if(!rx){box.innerHTML=`<div style="color:var(--r);margin-top:14px;padding:12px;background:rgba(255,107,107,.08);border-radius:7px;border:1px solid rgba(255,107,107,.22);"><div style="font-size:.95em;margin-bottom:4px;">⚠ INCOMPATIBLE COMBINATION</div><div style="font-size:.74em;color:#999;">This pairing does not produce stable combustion.</div><button class="rreset" onclick="resetRx()" style="margin-top:8px;">↺ Try Again</button></div>`;box.classList.remove('hidden');return;}
+S.ft=rx.type;S.tested=true;
+box.innerHTML=`<div class="rrb"><div class="req">${rx.eq} + Thrust</div><div class="rrgd">
+<div class="rri"><div class="rrl">⚡ SPECIFIC IMPULSE</div><div class="rrv g">${rx.isp}</div></div>
+<div class="rri"><div class="rrl">📊 PERFORMANCE</div><div class="rrv">${rx.perf}</div></div>
+<div class="rri"><div class="rrl">🧊 STORABILITY</div><div class="rrv">${rx.stor}</div></div>
+<div class="rri"><div class="rrl">🚀 HISTORICAL USE</div><div class="rrv">${rx.used}</div></div>
+<div class="rri"><div class="rrl">✅ ADVANTAGES</div><div class="rrv g">${rx.adv}</div></div>
+<div class="rri"><div class="rrl">⚠ DISADVANTAGES</div><div class="rrv b">${rx.dis}</div></div>
+</div><button class="rreset" onclick="resetRx()">↺ Test Another</button></div>`;
+box.classList.remove('hidden');document.getElementById('lnBtn').classList.remove('hidden');
+}
+function resetRx(){
+selF=null;selO=null;S.ft=null;S.tested=false;
+document.querySelectorAll('.mol').forEach(m=>m.classList.remove('sm'));
+['sF','sO'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('fl');});
+document.getElementById('sfF').textContent='—';document.getElementById('sfN').textContent='Select above';
+document.getElementById('soF').textContent='—';document.getElementById('soN').textContent='Select above';
+document.getElementById('rigBtn').disabled=true;document.getElementById('rxResult').classList.add('hidden');
+document.getElementById('lnBtn').classList.add('hidden');
+}
+
+/* MATCH */
+function matchR(){
+const{structure:st,staging:sg,guidance:gu,deployment:dp}=S.sel,ft=S.ft||'';
+if((st==='solid'||ft==='solid')&&dp==='submarine')return 'polaris';
+if(st==='solid'||ft==='solid')return 'minuteman';
+if(st==='clustered'||sg==='parallel')return 'r7';
+if(st==='balloon'||sg==='stage-half')return 'atlas';
+if(dp==='submarine')return 'polaris';
+if(st==='monolith'&&(ft==='early-hypergolic'||ft==='hypergolic'))return 'r12';
+if(st==='monolith')return 'jupiter';
+if(st==='multistage'&&dp==='silo'){if(gu==='stellar')return 'r36';return ft.includes('hypergolic')?'titan2':'titan2';}
+if(st==='multistage'&&ft.includes('hypergolic'))return 'r16';
+if(st==='multistage')return 'titan2';
+if(dp==='silo')return 'titan2';
+if(dp==='mobile')return ft.includes('hypergolic')?'r12':'jupiter';
+return 'r7';
+}
+
+/* NAV */
+function initNav(){
+  document.getElementById('nxBtn').addEventListener('click',function(){
+    if(S.ph===1 && Object.values(S.sel).filter(Boolean).length<5){
+      var a=document.querySelector('.val-a');
+      if(!a){a=document.createElement('div');a.className='val-a';a.textContent='⚠ Configure all 5 systems before proceeding.';document.querySelector('.floor').before(a);setTimeout(function(){a.remove();},2800);}
+      return;
+    }
+    goP(S.ph+1);
+  });
+  document.getElementById('bkBtn').addEventListener('click',function(){goP(S.ph-1);});
+  document.getElementById('lnBtn').addEventListener('click',launchSeq);
+  document.getElementById('rsBtn').addEventListener('click',function(){if(animRAF)cancelAnimationFrame(animRAF);location.reload();});
+}
+function goP(n){
+  document.getElementById('p'+S.ph).classList.add('hidden'); S.ph=n;
+  document.getElementById('p'+n).classList.remove('hidden');
+  document.querySelectorAll('.pd').forEach(function(d,i){d.classList.toggle('active',i+1===n);d.classList.toggle('done',i+1<n);});
+  document.querySelectorAll('.pc').forEach(function(c,i){c.classList.toggle('done',i+1<n);});
+  document.getElementById('bkBtn').classList.toggle('hidden',n===1);
+  document.getElementById('nxBtn').classList.toggle('hidden',n!==1);
+  document.getElementById('lnBtn').classList.toggle('hidden',n!==2||!S.tested);
+  renderVT(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* LAUNCH SEQ */
+function launchSeq(){
+  goP(3);
+  _rk = matchR();
+  _hudPct = 0; _hudMsg = 'LAUNCH SEQUENCE INITIATED';
+  var R = RDB[_rk];
+  var labels = {rocket:'ROCKET LAUNCH SEQUENCE', missile:'BALLISTIC MISSILE LAUNCH', submarine:'SUBMARINE COLD-LAUNCH'};
+  document.getElementById('atl').textContent = labels[R ? R.at : 'rocket'] || 'LAUNCH SEQUENCE';
+  if(R && R.at === 'submarine') runSubAnim(function(){ showDossier(_rk); });
+  else if(R && R.at === 'missile') runMissileAnim(function(){ showDossier(_rk); });
+  else runRocketAnim(function(){ showDossier(_rk); });
+}
+function skipAnim(){
+  if(animRAF){ cancelAnimationFrame(animRAF); animRAF = null; }
+  showDossier(_rk);
+}
+
+/* MATH */
+function lerp(a,b,t){ return a+(b-a)*t; }
+function eIn(t){ return t*t; }
+function eOut(t){ return 1-(1-t)*(1-t); }
+
+/* HUD - drawn onto the canvas itself */
+function drawHUD(ctx,W,H){
+  ctx.save();
+  ctx.fillStyle='rgba(0,4,14,0.80)';
+  ctx.fillRect(0,0,W,58);
+  ctx.font='12px monospace';
+  ctx.fillStyle='rgba(78,205,196,0.5)';
+  ctx.fillText(document.getElementById('atl').textContent, 16, 18);
+  ctx.font='bold 20px monospace';
+  ctx.fillStyle='#ff6b6b';
+  ctx.shadowColor='rgba(255,107,107,0.7)'; ctx.shadowBlur=10;
+  ctx.fillText(_hudMsg, 16, 46);
+  ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(255,255,255,0.07)';
+  ctx.fillRect(0, H-12, W, 12);
+  var grad = ctx.createLinearGradient(0,0,W,0);
+  grad.addColorStop(0,'#4ecdc4'); grad.addColorStop(1,'#ff6b6b');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0, H-12, W*(_hudPct/100), 12);
+  ctx.font='11px monospace'; ctx.fillStyle='rgba(78,205,196,0.7)';
+  ctx.fillText(Math.round(_hudPct)+'%', W-38, H-16);
+  ctx.restore();
+}
+
+/* STARS */
+function drawStars(ctx,W,H){
+  ctx.save();
+  for(var i=0;i<120;i++){
+    var sx=(Math.sin(i*7.3+1)*0.5+0.5)*W;
+    var sy=(Math.cos(i*3.7+2)*0.5+0.5)*H;
+    var sr=Math.max(0.2,0.4+Math.sin(i*1.1)*0.55);
+    var sa=0.2+0.7*Math.abs(Math.sin(i*0.9+Date.now()*0.0006));
+    ctx.beginPath(); ctx.arc(sx,sy,sr,0,6.28);
+    ctx.fillStyle='rgba(200,220,255,'+sa.toFixed(2)+')';
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* FLAME */
+function drawFlame(ctx,cx,y,sc,fr){
+  var sz=sc*(40+Math.sin(fr*0.38)*5);
+  ctx.save();
+  var g=ctx.createRadialGradient(cx,y,0,cx,y+sz*0.1,sz*0.4);
+  g.addColorStop(0,'rgba(255,255,245,0.98)'); g.addColorStop(1,'rgba(255,230,80,0)');
+  ctx.globalAlpha=0.95; ctx.fillStyle=g;
+  ctx.beginPath(); ctx.ellipse(cx,y+sz*0.06,sz*0.2,sz*0.4,0,0,6.28); ctx.fill();
+  g=ctx.createRadialGradient(cx,y+sz*0.15,0,cx,y+sz*0.38,sz*0.68);
+  g.addColorStop(0,'rgba(255,148,12,0.9)'); g.addColorStop(1,'rgba(255,55,15,0)');
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.ellipse(cx,y+sz*0.26,sz*0.34,sz*0.62,0,0,6.28); ctx.fill();
+  g=ctx.createRadialGradient(cx,y+sz*0.34,0,cx,y+sz*0.56,sz*1.05);
+  g.addColorStop(0,'rgba(255,75,15,0.42)'); g.addColorStop(1,'rgba(255,35,5,0)');
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.ellipse(cx,y+sz*0.44,sz*0.55,sz*0.94,0,0,6.28); ctx.fill();
+  ctx.restore();
+}
+
+/* SMOKE */
+function drawSmoke(ctx,cx,gy,age){
+  var alpha=Math.min(0.55,age*0.016);
+  ctx.save(); ctx.globalAlpha=alpha;
+  var r1=50+age*2.5;
+  var g=ctx.createRadialGradient(cx-25,gy,0,cx-25,gy,r1);
+  g.addColorStop(0,'rgba(170,170,162,0.55)'); g.addColorStop(1,'rgba(148,148,140,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(cx-25,gy,r1,r1*0.44,0,0,6.28); ctx.fill();
+  var r2=62+age*2;
+  g=ctx.createRadialGradient(cx+28,gy,0,cx+28,gy,r2);
+  g.addColorStop(0,'rgba(158,158,150,0.46)'); g.addColorStop(1,'rgba(140,140,132,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(cx+28,gy,r2,r2*0.4,0,0,6.28); ctx.fill();
+  ctx.restore();
+}
+
+/* GROUND */
+function drawGround(ctx,W,H,gy){
+  ctx.fillStyle='rgba(10,24,38,0.95)'; ctx.fillRect(0,gy,W,H-gy);
+  ctx.strokeStyle='rgba(78,205,196,0.35)'; ctx.lineWidth=2.2;
+  ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke();
+}
+
+/* ROCKET BODY */
+function drawRocket(ctx,cx,ry,sc,hasFins,hasBst){
+  ctx.save(); ctx.translate(cx,ry); ctx.scale(sc,sc);
+  ctx.fillStyle='rgba(50,105,145,0.18)'; ctx.strokeStyle='rgba(78,205,196,0.9)'; ctx.lineWidth=2.2;
+  ctx.fillRect(-22,0,44,140); ctx.strokeRect(-22,0,44,140);
+  ctx.beginPath(); ctx.moveTo(-22,0); ctx.lineTo(0,-68); ctx.lineTo(22,0); ctx.closePath();
+  ctx.fillStyle='rgba(55,118,158,0.22)'; ctx.fill(); ctx.stroke();
+  ctx.strokeStyle='rgba(78,205,196,0.22)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-22,50); ctx.lineTo(22,50); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-22,95); ctx.lineTo(22,95); ctx.stroke();
+  ctx.fillStyle='rgba(255,107,107,0.22)'; ctx.strokeStyle='rgba(255,107,107,0.85)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(-22,140); ctx.lineTo(-32,164); ctx.lineTo(32,164); ctx.lineTo(22,140); ctx.closePath(); ctx.fill(); ctx.stroke();
+  if(hasFins){
+    ctx.fillStyle='rgba(78,205,196,0.1)'; ctx.strokeStyle='rgba(78,205,196,0.7)'; ctx.lineWidth=1.7;
+    ctx.beginPath(); ctx.moveTo(22,105); ctx.lineTo(52,140); ctx.lineTo(22,140); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-22,105); ctx.lineTo(-52,140); ctx.lineTo(-22,140); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  if(hasBst){
+    var bxs=[-52,52];
+    bxs.forEach(function(bx){
+      var sign=bx<0?-1:1;
+      ctx.fillStyle='rgba(78,205,196,0.08)'; ctx.strokeStyle='rgba(78,205,196,0.65)'; ctx.lineWidth=2;
+      ctx.fillRect(bx-8,10,16,105); ctx.strokeRect(bx-8,10,16,105);
+      ctx.beginPath(); ctx.moveTo(bx-8,10); ctx.lineTo(bx,-12); ctx.lineTo(bx+8,10); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='rgba(255,107,107,0.2)'; ctx.strokeStyle='rgba(255,107,107,0.75)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(bx-8,115); ctx.lineTo(bx-11,130); ctx.lineTo(bx+11,130); ctx.lineTo(bx+8,115); ctx.closePath(); ctx.fill(); ctx.stroke();
+    });
+  }
+  ctx.restore();
+}
+
+/* MISSILE BODY */
+function drawMissile(ctx,cx,my,sc,hasFins,hasStages){
+  ctx.save(); ctx.translate(cx,my); ctx.scale(sc,sc);
+  ctx.fillStyle='rgba(40,75,95,0.2)'; ctx.strokeStyle='rgba(78,205,196,0.9)'; ctx.lineWidth=2;
+  ctx.fillRect(-14,0,28,110); ctx.strokeRect(-14,0,28,110);
+  ctx.beginPath(); ctx.moveTo(-14,0); ctx.lineTo(0,-60); ctx.lineTo(14,0); ctx.closePath();
+  ctx.fillStyle='rgba(78,200,192,0.15)'; ctx.fill(); ctx.stroke();
+  if(hasStages){ ctx.strokeStyle='rgba(255,107,107,0.5)'; ctx.lineWidth=2.2; ctx.strokeRect(-15,40,30,11); }
+  if(hasFins){
+    ctx.fillStyle='rgba(78,205,196,0.1)'; ctx.strokeStyle='rgba(78,205,196,0.7)'; ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.moveTo(14,80); ctx.lineTo(30,110); ctx.lineTo(14,110); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-14,80); ctx.lineTo(-30,110); ctx.lineTo(-14,110); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  ctx.fillStyle='rgba(255,107,107,0.22)'; ctx.strokeStyle='rgba(255,107,107,0.85)'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.moveTo(-14,110); ctx.lineTo(-18,126); ctx.lineTo(18,126); ctx.lineTo(14,110); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+/* SLBM BODY */
+function drawSLBM(ctx,cx,sy){
+  ctx.save(); ctx.translate(cx,sy);
+  ctx.fillStyle='rgba(35,70,90,0.2)'; ctx.strokeStyle='rgba(78,205,196,0.9)'; ctx.lineWidth=2;
+  ctx.fillRect(-12,0,24,100); ctx.strokeRect(-12,0,24,100);
+  ctx.beginPath(); ctx.moveTo(-12,0); ctx.lineTo(0,-54); ctx.lineTo(12,0); ctx.closePath();
+  ctx.fillStyle='rgba(78,200,192,0.14)'; ctx.fill(); ctx.stroke();
+  ctx.strokeStyle='rgba(255,107,107,0.45)'; ctx.lineWidth=1.8; ctx.strokeRect(-13,38,26,10);
+  ctx.fillStyle='rgba(255,107,107,0.2)'; ctx.strokeStyle='rgba(255,107,107,0.82)'; ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.moveTo(-12,100); ctx.lineTo(-16,115); ctx.lineTo(16,115); ctx.lineTo(12,100); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+/* SILO */
+function drawSilo(ctx,cx,GY,fr){
+  var openPct=Math.min(1,Math.max(0,(fr-20)/55));
+  ctx.fillStyle='rgba(18,38,60,0.92)'; ctx.strokeStyle='rgba(78,205,196,0.45)'; ctx.lineWidth=2.6;
+  ctx.fillRect(cx-60,GY-320,120,320); ctx.strokeRect(cx-60,GY-320,120,320);
+  var gap=openPct*62;
+  var lw=Math.max(0,62-gap);
+  ctx.fillStyle='rgba(35,68,95,0.95)'; ctx.lineWidth=2.2;
+  ctx.fillRect(cx-62,GY-334,lw,18); ctx.strokeRect(cx-62,GY-334,lw,18);
+  ctx.fillRect(cx+gap,GY-334,lw,18); ctx.strokeRect(cx+gap,GY-334,lw,18);
+}
+
+/* TEL */
+function drawTEL(ctx,cx,GY,fr){
+  var angle=lerp(Math.PI/2,0,Math.min(1,fr/80));
+  ctx.save(); ctx.translate(cx-115,GY);
+  ctx.fillStyle='rgba(28,55,35,0.9)'; ctx.strokeStyle='rgba(78,205,196,0.45)'; ctx.lineWidth=2.2;
+  ctx.fillRect(-35,-24,230,24); ctx.strokeRect(-35,-24,230,24);
+  [0,60,118,176].forEach(function(wx){
+    ctx.beginPath(); ctx.arc(wx-35,0,14,0,6.28);
+    ctx.fillStyle='rgba(38,55,55,0.9)'; ctx.fill(); ctx.stroke();
+  });
+  ctx.save(); ctx.translate(34,-24); ctx.rotate(angle);
+  ctx.fillStyle='rgba(45,75,55,0.85)'; ctx.strokeStyle='rgba(78,205,196,0.45)'; ctx.lineWidth=2.2;
+  ctx.fillRect(-6,0,12,-128); ctx.strokeRect(-6,0,12,-128);
+  ctx.restore(); ctx.restore();
+}
+
+/* WATER */
+function drawWater(ctx,W,H,WY,fr){
+  var wg=ctx.createLinearGradient(0,WY,0,H);
+  wg.addColorStop(0,'rgba(0,18,44,0.94)'); wg.addColorStop(1,'rgba(0,8,26,0.98)');
+  ctx.fillStyle=wg; ctx.fillRect(0,WY,W,H-WY);
+  ctx.strokeStyle='rgba(78,205,196,0.48)'; ctx.lineWidth=2.2;
+  ctx.beginPath(); ctx.moveTo(0,WY);
+  for(var x=0;x<=W;x+=9){ ctx.lineTo(x,WY+Math.sin(x*0.034+fr*0.07)*5); }
+  ctx.stroke();
+}
+
+/* SUB */
+function drawSub(ctx,cx,sy,al){
+  ctx.save(); ctx.globalAlpha=al;
+  ctx.fillStyle='rgba(18,42,65,0.9)'; ctx.strokeStyle='rgba(78,205,196,0.55)'; ctx.lineWidth=2.6;
+  ctx.beginPath(); ctx.ellipse(cx,sy+26,175,34,0,0,6.28); ctx.fill(); ctx.stroke();
+  ctx.fillRect(cx-14,sy-56,28,40); ctx.strokeRect(cx-14,sy-56,28,40);
+  ctx.lineWidth=1.6; ctx.strokeStyle='rgba(78,205,196,0.5)';
+  ctx.beginPath(); ctx.moveTo(cx-5,sy-56); ctx.lineTo(cx-5,sy-72); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+6,sy-56); ctx.lineTo(cx+6,sy-72); ctx.stroke();
+  ctx.strokeStyle='rgba(255,107,107,0.45)'; ctx.lineWidth=2.2; ctx.strokeRect(cx-6,sy-14,12,26);
+  ctx.restore();
+}
+
+/* BUBBLES */
+function drawBubbles(ctx,cx,WY,H,fr){
+  ctx.save(); ctx.globalAlpha=0.44;
+  for(var i=0;i<12;i++){
+    var bx=cx-12+Math.sin(i*2.2+fr*0.1)*16;
+    var by=WY+16+i*((H-WY-48)/12);
+    var br=Math.max(0.5,2+i*0.7);
+    ctx.beginPath(); ctx.arc(bx,by,br,0,6.28);
+    ctx.fillStyle='rgba(88,182,212,'+(0.6-i*0.04)+')'; ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* SPLASH */
+function drawSplash(ctx,cx,WY,age){
+  if(age<=0||age>30) return;
+  ctx.save(); ctx.globalAlpha=1-age/30;
+  ctx.strokeStyle='rgba(110,190,218,0.8)'; ctx.lineWidth=2.2;
+  [-44,-22,22,44].forEach(function(dx){
+    ctx.beginPath(); ctx.moveTo(cx+dx*0.3,WY); ctx.quadraticCurveTo(cx+dx,WY-age*6,cx+dx*1.5,WY+12); ctx.stroke();
+  });
+  ctx.beginPath(); ctx.ellipse(cx,WY,age*5.5,age*1.3,0,0,6.28);
+  ctx.strokeStyle='rgba(78,205,196,0.5)'; ctx.stroke();
+  ctx.restore();
+}
+
+/* === ANIMATION 1: ROCKET LAUNCH === */
+function runRocketAnim(onDone){
+  var cnv=document.getElementById('lc');
+  var ctx=cnv.getContext('2d');
+  var W=cnv.width, H=cnv.height, cx=W/2, GY=H-90;
+  var hasBst=(S.sel.structure==='clustered');
+  var hasFins=(S.sel.fins!=='none');
+  var fr=0, TOTAL=300, si=0;
+  var steps=[[0,0,'T-10 · SYSTEMS CHECK'],[20,20,'T-8 · PROPELLANT PRESSURIZED'],[40,40,'T-5 · IGNITION SEQUENCE'],[60,62,'T-2 · ALL ENGINES RUNNING'],[80,84,'LIFTOFF — FULL THRUST!'],[110,92,'MAX-Q — MAXIMUM DYNAMIC PRESSURE'],[170,96,'CLIMBING THROUGH ATMOSPHERE'],[230,98,'STAGING SEQUENCE'],[280,100,'TRAJECTORY NOMINAL']];
+  function tick(){
+    ctx.clearRect(0,0,W,H);
+    var sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,'rgba(0,2,8,1)'); sky.addColorStop(0.7,'rgba(1,7,22,1)'); sky.addColorStop(1,'rgba(3,14,30,1)');
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+    drawStars(ctx,W,H);
+    while(si<steps.length && fr>=steps[si][0]){ _hudPct=steps[si][1]; _hudMsg=steps[si][2]; si++; }
+    var ry, sc=2.4;
+    if(fr<80){ ry=GY-220; }
+    else{ var p=eIn((fr-80)/(TOTAL-80)); ry=GY-220-p*p*(H+450); sc=Math.max(0.7,2.4-p*0.65); }
+    // gantry fades after liftoff
+    if(fr<140){
+      var ga=Math.max(0,1-(fr-80)/62);
+      ctx.save(); ctx.globalAlpha=ga;
+      ctx.strokeStyle='rgba(78,205,196,0.4)'; ctx.lineWidth=3.5;
+      ctx.beginPath(); ctx.moveTo(cx-145,GY); ctx.lineTo(cx-145,GY-340); ctx.lineTo(cx-62,GY-340); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+145,GY); ctx.lineTo(cx+145,GY-340); ctx.lineTo(cx+62,GY-340); ctx.stroke();
+      // service arm
+      ctx.beginPath(); ctx.moveTo(cx-145,GY-240); ctx.lineTo(cx-62,GY-240); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+145,GY-240); ctx.lineTo(cx+62,GY-240); ctx.stroke();
+      ctx.fillStyle='rgba(22,46,74,0.95)'; ctx.fillRect(cx-100,GY-30,200,30); ctx.strokeRect(cx-100,GY-30,200,30);
+      ctx.restore();
+    }
+    if(fr>=38) drawSmoke(ctx,cx,GY,fr-38);
+    if(fr>=38){
+      var fs = (fr<80) ? lerp(0.8,2.2,(fr-38)/42) : 2.2*(sc/2.4);
+      drawFlame(ctx, cx, Math.min(ry+220*(sc/2.4), GY-14), fs, fr);
+    }
+    drawRocket(ctx,cx,ry,sc,hasFins,hasBst);
+    if(hasBst && fr>=200 && fr<222){
+      var a2=(fr-200)/22;
+      ctx.save(); ctx.globalAlpha=(1-a2)*0.75;
+      ctx.strokeStyle='rgba(255,220,80,0.9)'; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.arc(cx, ry+110*(sc/2.4), 80*(sc/2.4), 0, 6.28); ctx.stroke();
+      ctx.restore();
+    }
+    drawGround(ctx,W,H,GY);
+    drawHUD(ctx,W,H);
+    fr++;
+    if(fr<TOTAL){ animRAF=requestAnimationFrame(tick); } else { setTimeout(onDone,500); }
+  }
+  animRAF=requestAnimationFrame(tick);
+}
+
+/* === ANIMATION 2: MISSILE LAUNCH === */
+function runMissileAnim(onDone){
+  var cnv=document.getElementById('lc');
+  var ctx=cnv.getContext('2d');
+  var W=cnv.width, H=cnv.height, cx=W/2, GY=H-90;
+  var isSilo=(S.sel.deployment==='silo');
+  var hasFins=(S.sel.fins!=='none');
+  var hasStages=(S.sel.staging==='serial'||S.sel.structure==='multistage');
+  var fr=0, TOTAL=300, si=0;
+  var steps=[[0,0,isSilo?'SILO HATCH OPENING':'TEL ERECTING MISSILE'],[18,16,'PROPELLANT PRESSURIZATION'],[36,34,'IGNITION SEQUENCE START'],[56,54,'PRE-IGNITION: 3 · 2 · 1'],[74,72,'IGNITION — ENGINE AT THRUST'],[92,88,'LAUNCH — MISSILE AWAY!'],[145,94,'POWERED FLIGHT CLIMBING'],[205,97,'STAGE SEPARATION'],[268,100,'WARHEAD ON TRAJECTORY']];
+  function tick(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='rgba(0,2,8,1)'; ctx.fillRect(0,0,W,H);
+    drawStars(ctx,W,H);
+    while(si<steps.length && fr>=steps[si][0]){ _hudPct=steps[si][1]; _hudMsg=steps[si][2]; si++; }
+    var my;
+    if(fr<92){
+      var rise=isSilo?Math.max(0,(fr-56)*6):0;
+      my=GY-160-rise;
+    } else {
+      var p=eIn((fr-92)/(TOTAL-92)); my=GY-160-p*p*(H+480);
+    }
+    if(isSilo) drawSilo(ctx,cx,GY,fr);
+    else drawTEL(ctx,cx,GY,fr);
+    if(fr>=46) drawSmoke(ctx,cx,GY,fr-46);
+    if(fr>=64){
+      var fs=lerp(0.85,1.75,(fr-64)/32);
+      if(fr>=92){ fs*=Math.max(0.55,1-(fr-92)/(TOTAL-92)*0.38); }
+      drawFlame(ctx, cx, Math.min(my+188, GY-12), fs, fr);
+    }
+    drawMissile(ctx,cx,my,2.1,hasFins,hasStages);
+    if(hasStages && fr>=205 && fr<224){
+      var a=(fr-205)/19;
+      ctx.save(); ctx.globalAlpha=(1-a)*0.82;
+      ctx.strokeStyle='rgba(255,165,50,0.92)'; ctx.lineWidth=3.5;
+      ctx.beginPath(); ctx.arc(cx, my+84, 30, 0, 6.28); ctx.stroke();
+      ctx.restore();
+    }
+    drawGround(ctx,W,H,GY);
+    drawHUD(ctx,W,H);
+    fr++;
+    if(fr<TOTAL){ animRAF=requestAnimationFrame(tick); } else { setTimeout(onDone,500); }
+  }
+  animRAF=requestAnimationFrame(tick);
+}
+
+/* === ANIMATION 3: SUBMARINE LAUNCH === */
+function runSubAnim(onDone){
+  var cnv=document.getElementById('lc');
+  var ctx=cnv.getContext('2d');
+  var W=cnv.width, H=cnv.height, cx=W/2, WY=H-295;
+  var fr=0, TOTAL=360, si=0;
+  var steps=[[0,0,'SUBMARINE SUBMERGED · POSITIONING'],[22,12,'LAUNCH TUBE FLOODING'],[44,28,'GAS EJECTION CHARGE ARMED'],[66,46,'COLD LAUNCH — STEAM EJECTION'],[96,60,'SURFACE BREAK!'],[110,72,'ABOVE WATER — COASTING'],[148,84,'MOTOR IGNITION!'],[208,93,'POWERED FLIGHT CLIMBING'],[298,97,'STAGE SEPARATION'],[342,100,'WARHEAD ON TRAJECTORY']];
+  function tick(){
+    ctx.clearRect(0,0,W,H);
+    var sky=ctx.createLinearGradient(0,0,0,WY); sky.addColorStop(0,'rgba(0,2,8,1)'); sky.addColorStop(1,'rgba(0,6,20,0.9)');
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,WY);
+    drawStars(ctx,W,WY);
+    while(si<steps.length && fr>=steps[si][0]){ _hudPct=steps[si][1]; _hudMsg=steps[si][2]; si++; }
+    drawWater(ctx,W,H,WY,fr);
+    if(fr<138){ var sa=Math.max(0,1-(fr-94)/46); drawSub(ctx,cx,H-152,sa); }
+    var sy;
+    if(fr<66){ sy=H-152-50; }
+    else if(fr<100){ var p1=eOut((fr-66)/34); sy=H-152-50-p1*(H-WY+110); }
+    else if(fr<148){ var p2=eOut((fr-100)/48); sy=WY-p2*175; }
+    else{ var p3=eIn((fr-148)/(TOTAL-148)); sy=WY-175-p3*p3*(H+580); }
+    if(fr>=54 && fr<108) drawBubbles(ctx,cx,WY,H,fr);
+    drawSplash(ctx,cx,WY,fr-97);
+    if(fr>=148){ var fs=lerp(0.7,1.3,(fr-148)/65); drawFlame(ctx,cx,Math.min(sy+122,WY-6),fs,fr); }
+    if(fr>=64 && sy<H-12) drawSLBM(ctx,cx,sy);
+    if(fr>=298 && fr<316){
+      var a=(fr-298)/18;
+      ctx.save(); ctx.globalAlpha=(1-a)*0.84;
+      ctx.strokeStyle='rgba(255,165,50,0.92)'; ctx.lineWidth=3.2;
+      ctx.beginPath(); ctx.arc(cx,sy+48,24,0,6.28); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.save(); ctx.globalAlpha=0.25; ctx.fillStyle='rgba(78,205,196,1)';
+    ctx.font='13px monospace'; ctx.fillText('SEA LEVEL ◀',16,WY-12); ctx.restore();
+    drawHUD(ctx,W,H);
+    fr++;
+    if(fr<TOTAL){ animRAF=requestAnimationFrame(tick); } else { setTimeout(onDone,500); }
+  }
+  animRAF=requestAnimationFrame(tick);
+}
+
+/* DOSSIER */
+function showDossier(rk){
+  if(animRAF){cancelAnimationFrame(animRAF);animRAF=null;}
+  document.getElementById('lAnimSec').classList.add('hidden');
+  var sk=document.getElementById('skipBtn');if(sk)sk.style.display='none';
+  var dos=document.getElementById('dos');dos.classList.remove('hidden');
+  document.getElementById('rsBtn').classList.remove('hidden');
+  document.getElementById('lnBtn').classList.add('hidden');
+  var R=RDB[rk];
+  if(!R){dos.innerHTML='<p style="color:#f66;text-align:center;padding:40px;">Match data unavailable.</p>';return;}
+  var SN={
+    structure:{clustered:'Clustered Strap-on Boosters',balloon:'Balloon Tank',monolith:'Monolith Single-Body',multistage:'Multi-Stage Stack',solid:'Solid-Propellant Motor'},
+    staging:{'stage-half':'Stage-and-a-Half',parallel:'Parallel (Korolev Cross)',serial:'Serial Staging',single:'Single Stage'},
+    guidance:{inertial:'Inertial Navigation',radio:'Radio Command',stellar:'Stellar-Inertial'},
+    fins:{'large-delta':'Large Swept-Delta Fins','small-stub':'Small Stub Fins',none:'No Fins / TVC'},
+    deployment:{pad:'Fixed Launch Pad',silo:'Hardened Silo',mobile:'Mobile TEL',submarine:'Submarine (SLBM)'}
+  };
+  var FL={'hydrocarbon-lox':'RP-1 / LOX','hydrogen-lox':'LH\u2082 / LOX','hypergolic':'UDMH / N\u2082O\u2084','early-hypergolic':'UDMH / IRFNA','solid':'HTPB / AP (Solid)'};
+  var vt=getVT();
+  var choiceRows=[['Structure',SN.structure[S.sel.structure]],['Staging',SN.staging[S.sel.staging]],['Guidance',SN.guidance[S.sel.guidance]],['Fins/Ctrl',SN.fins[S.sel.fins]],['Deployment',SN.deployment[S.sel.deployment]],['Propellant',FL[S.ft]||'—']];
+  var specRows=Object.keys(R.specs).map(function(k){return '<div class="sl"><span class="sla">'+k+':</span><span class="slv">'+R.specs[k]+'</span></div>';}).join('');
+  var matchedRows=R.ch.map(function(c,i){return '<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:.72em;">'+['Structure','Staging','Guidance','Fins','Deployment'][i]+': <span style="color:var(--c)">'+c+'</span></div>';}).join('');
+  dos.innerHTML='<div class="mb">'+
+    (vt?'<div style="margin-bottom:10px;"><span class="vbadge '+vt.c+'" style="font-size:.73em;">'+vt.l+'</span></div>':'')+
+    '<h3>\u25c8 INTELLIGENCE MATCH CONFIRMED \u25c8</h3>'+
+    '<div class="rnl">'+R.name+'</div>'+
+    '<div class="rds">'+R.desig+' &nbsp;\xb7&nbsp; '+R.nation+' &nbsp;\xb7&nbsp; First flight: '+R.yr+' &nbsp;\xb7&nbsp; <strong style="color:var(--g)">'+R.vtype+'</strong></div>'+
+    '<div class="mm">'+R.match+'</div></div>'+
+    '<div class="cgd">'+
+    '<div class="cs"><div class="cst">\u25c8 YOUR DESIGN CHOICES</div>'+
+    choiceRows.map(function(r){return '<div class="sl"><span class="sla">'+r[0]+':</span><span class="slv">'+(r[1]||'\u2014')+'</span></div>';}).join('')+
+    '<div style="margin-top:10px;padding:9px;background:rgba(78,205,196,.03);border-radius:5px;"><div style="color:var(--r);margin-bottom:4px;font-size:.75em;letter-spacing:1px;">HISTORICAL MATCH:</div>'+matchedRows+'</div></div>'+
+    '<div class="cs"><div class="cst">\u25c8 ACTUAL SPECIFICATIONS</div>'+specRows+
+    '<div style="margin-top:10px;padding:9px;background:rgba(0,0,0,.18);border-radius:5px;font-size:.74em;color:#bbb;line-height:1.72;">'+R.desc+'</div></div></div>'+
+    '<div class="hb"><h4>\u25c8 HISTORICAL SIGNIFICANCE</h4><p>'+R.hist+'</p></div>';
+}
+</script>
+</body>
+</html>
