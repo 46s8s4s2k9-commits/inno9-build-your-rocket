@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Race Rocket Builder — Propellant Chemistry Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   ROOT & RESET
+═══════════════════════════════════════════════ */
+:root {
+  --bg:        #080b18;
+  --surface:   #0f1225;
+  --surface2:  #161a2e;
+  --border:    rgba(78,205,196,0.12);
+  --cyan:      #4ecdc4;
+  --red:       #ff6b6b;
+  --text:      #dde1ec;
+  --muted:     #5a6070;
+
+  --fuel-c:    #ff8c42;   /* combustion orange */
+  --fuel-h:    #c77dff;   /* hypergolic violet */
+  --fuel-s:    #52b788;   /* solid green */
+
+  --fuel-c-dim: rgba(255,140,66,0.12);
+  --fuel-h-dim: rgba(199,125,255,0.12);
+  --fuel-s-dim: rgba(82,183,136,0.12);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* CRT scanlines */
+body::before {
+  content:'';
+  position:fixed;inset:0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(255,255,255,0.018) 2px, rgba(255,255,255,0.018) 4px
+  );
+  pointer-events:none;z-index:9998;
+}
+
+/* Vignette */
+body::after {
+  content:'';
+  position:fixed;inset:0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%);
+  pointer-events:none;z-index:9997;
+}
+
+/* ═══════════════════════════════════════════════
+   STAR FIELD BG
+═══════════════════════════════════════════════ */
+#starfield {
+  position:fixed;inset:0;z-index:0;
+  overflow:hidden;
+  pointer-events:none;
+}
+.star {
+  position:absolute;
+  border-radius:50%;
+  background:#fff;
+  animation: twinkle var(--dur, 3s) ease-in-out infinite var(--delay, 0s);
+}
+@keyframes twinkle {
+  0%,100%{opacity:var(--min-op,0.1);}
+  50%{opacity:var(--max-op,0.8);}
+}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════ */
+.wrap {
+  position:relative;z-index:1;
+  max-width:1300px;
+  margin:0 auto;
+  padding:0 24px 80px;
+}
+
+/* ═══════════════════════════════════════════════
+   HERO
+═══════════════════════════════════════════════ */
+.hero {
+  text-align:center;
+  padding:60px 0 50px;
+  position:relative;
+}
+
+.hero-eyebrow {
+  font-family:'Space Mono',monospace;
+  font-size:0.65rem;
+  letter-spacing:0.35em;
+  color:var(--muted);
+  text-transform:uppercase;
+  margin-bottom:20px;
+  animation: fadeDown 0.8s ease both;
+}
+
+.hero h1 {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(3.5rem,10vw,8rem);
+  line-height:0.9;
+  letter-spacing:0.04em;
+  animation: fadeDown 0.8s ease 0.1s both;
+}
+.hero h1 .line1 {
+  display:block;
+  background:linear-gradient(135deg,#fff 0%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero h1 .line2 {
+  display:block;
+  background:linear-gradient(135deg,var(--red) 0%,#ff8c42 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  font-size:0.55em;
+  letter-spacing:0.12em;
+  margin-top:4px;
+}
+
+.hero-sub {
+  margin-top:20px;
+  font-size:1rem;
+  color:var(--muted);
+  font-weight:300;
+  max-width:500px;
+  margin-left:auto;margin-right:auto;
+  line-height:1.7;
+  animation: fadeDown 0.8s ease 0.2s both;
+}
+
+@keyframes fadeDown {
+  from{opacity:0;transform:translateY(-16px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* ═══════════════════════════════════════════════
+   PHASE STEPPER
+═══════════════════════════════════════════════ */
+.stepper {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  margin-bottom:50px;
+  animation: fadeDown 0.8s ease 0.3s both;
+}
+.step {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 28px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  cursor:pointer;
+  transition:all 0.3s ease;
+  position:relative;
+}
+.step:first-child{border-radius:12px 0 0 12px;}
+.step:last-child{border-radius:0 12px 12px 0;}
+.step + .step{border-left:none;}
+
+.step-num {
+  width:28px;height:28px;
+  border-radius:50%;
+  border:2px solid var(--muted);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Space Mono',monospace;
+  font-size:0.7rem;
+  color:var(--muted);
+  transition:all 0.3s ease;
+  flex-shrink:0;
+}
+.step-label {
+  font-family:'Space Mono',monospace;
+  font-size:0.65rem;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color:var(--muted);
+  transition:all 0.3s ease;
+}
+
+.step.active {
+  background:rgba(78,205,196,0.08);
+  border-color:rgba(78,205,196,0.4);
+}
+.step.active .step-num {
+  border-color:var(--cyan);
+  color:var(--cyan);
+  box-shadow:0 0 12px rgba(78,205,196,0.4);
+}
+.step.active .step-label { color:var(--cyan); }
+
+.step.done .step-num {
+  background:var(--cyan);
+  border-color:var(--cyan);
+  color:var(--bg);
+}
+.step.done .step-label { color:var(--cyan); }
+
+/* ═══════════════════════════════════════════════
+   PHASE PANELS
+═══════════════════════════════════════════════ */
+.phase { display:none; }
+.phase.active { display:block; animation: phaseIn 0.5s ease; }
+@keyframes phaseIn {
+  from{opacity:0;transform:translateY(20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* ═══════════════════════════════════════════════
+   CARDS / SURFACES
+═══════════════════════════════════════════════ */
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:28px;
+  backdrop-filter:blur(10px);
+}
+
+.card-title {
+  font-family:'Space Mono',monospace;
+  font-size:0.65rem;
+  letter-spacing:0.25em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:20px;
+  display:flex;align-items:center;gap:10px;
+}
+.card-title::before {
+  content:'';
+  width:20px;height:1px;
+  background:var(--cyan);
+}
+
+/* ═══════════════════════════════════════════════
+   PHASE 1 — ASSEMBLY
+═══════════════════════════════════════════════ */
+.assembly-grid {
+  display:grid;
+  grid-template-columns:320px 1fr;
+  gap:24px;
+}
+@media(max-width:900px){.assembly-grid{grid-template-columns:1fr;}}
+
+/* Component options */
+.comp-section { margin-bottom:28px; }
+.comp-section-label {
+  font-family:'Space Mono',monospace;
+  font-size:0.6rem;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--red);
+  margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.comp-section-label::after{content:'';flex:1;height:1px;background:rgba(255,107,107,0.2);}
+
+.comp-option {
+  border:1.5px solid rgba(78,205,196,0.15);
+  border-radius:12px;
+  padding:14px 16px;
+  margin-bottom:10px;
+  cursor:pointer;
+  transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  position:relative;
+  overflow:hidden;
+  background:rgba(78,205,196,0.03);
+}
+.comp-option::after {
+  content:'✓';
+  position:absolute;right:14px;top:50%;
+  transform:translateY(-50%) scale(0);
+  color:var(--cyan);font-size:1.1rem;font-weight:bold;
+  transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.comp-option:hover {
+  border-color:rgba(78,205,196,0.4);
+  background:rgba(78,205,196,0.07);
+  transform:translateX(6px);
+}
+.comp-option.selected {
+  border-color:var(--cyan);
+  background:rgba(78,205,196,0.1);
+  border-width:2px;
+  transform:translateX(6px);
+  box-shadow:0 0 20px rgba(78,205,196,0.15);
+}
+.comp-option.selected::after{transform:translateY(-50%) scale(1);}
+.opt-name {
+  font-weight:600;color:var(--cyan);
+  font-size:0.9rem;margin-bottom:4px;
+}
+.opt-desc { font-size:0.78rem;color:#8891a8;line-height:1.5; }
+.opt-tag {
+  display:inline-block;
+  font-family:'Space Mono',monospace;
+  font-size:0.6rem;letter-spacing:0.1em;
+  padding:2px 8px;border-radius:4px;
+  background:rgba(255,107,107,0.15);color:var(--red);
+  border:1px solid rgba(255,107,107,0.25);
+  margin-top:6px;
+}
+
+/* Blueprint drafting table */
+.drafting {
+  background:var(--surface);
+  border:1.5px solid rgba(78,205,196,0.2);
+  border-radius:16px;
+  position:relative;
+  overflow:hidden;
+  min-height:580px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 29px,rgba(78,205,196,0.04) 29px,rgba(78,205,196,0.04) 30px),
+    repeating-linear-gradient(90deg,transparent,transparent 29px,rgba(78,205,196,0.04) 29px,rgba(78,205,196,0.04) 30px);
+  box-shadow:inset 0 0 60px rgba(78,205,196,0.05);
+}
+.drafting-label {
+  position:absolute;top:16px;left:20px;
+  font-family:'Space Mono',monospace;
+  font-size:0.6rem;letter-spacing:0.25em;
+  color:rgba(78,205,196,0.25);
+  text-transform:uppercase;
+}
+.drafting-label2 {
+  position:absolute;top:16px;right:20px;
+  font-family:'Space Mono',monospace;
+  font-size:0.6rem;letter-spacing:0.15em;
+  color:rgba(78,205,196,0.2);
+}
+
+/* Progress pills */
+.progress-row {
+  display:flex;gap:12px;flex-wrap:wrap;
+  margin-bottom:24px;
+}
+.prog-pill {
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:8px 16px;
+  font-family:'Space Mono',monospace;
+  font-size:0.65rem;
+  letter-spacing:0.1em;
+  color:var(--muted);
+  transition:all 0.4s ease;
+}
+.prog-pill.done {
+  border-color:rgba(78,205,196,0.4);
+  color:var(--cyan);
+  background:rgba(78,205,196,0.08);
+}
+.prog-pill .pill-dot {
+  width:7px;height:7px;border-radius:50%;
+  background:var(--muted);
+  transition:all 0.4s ease;
+}
+.prog-pill.done .pill-dot {
+  background:var(--cyan);
+  box-shadow:0 0 8px var(--cyan);
+}
+
+/* Status text */
+.status-bar {
+  text-align:center;padding:18px;
+  background:rgba(0,0,0,0.2);
+  border-top:1px solid var(--border);
+  font-size:0.88rem;color:var(--muted);
+  position:absolute;bottom:0;left:0;right:0;
+  transition:all 0.3s ease;
+}
+.status-bar .hl{color:var(--cyan);font-weight:600;}
+
+/* ═══════════════════════════════════════════════
+   PHASE 2 — CHEMISTRY LAB
+═══════════════════════════════════════════════ */
+.lab-header {
+  text-align:center;margin-bottom:40px;
+}
+.lab-header h2 {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2.5rem,6vw,4.5rem);
+  letter-spacing:0.05em;
+  background:linear-gradient(135deg,var(--cyan),var(--red));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:10px;
+}
+.lab-header p {font-size:0.95rem;color:var(--muted);font-weight:300;line-height:1.7;}
+
+/* Propellant selector cards */
+.fuel-selector {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+  margin-bottom:36px;
+}
+@media(max-width:700px){.fuel-selector{grid-template-columns:1fr;}}
+
+.fuel-card {
+  border:2px solid var(--border);
+  border-radius:16px;
+  padding:24px 20px;
+  cursor:pointer;
+  transition:all 0.4s cubic-bezier(0.34,1.3,0.64,1);
+  position:relative;
+  overflow:hidden;
+  background:var(--surface);
+  text-align:center;
+}
+.fuel-card::before {
+  content:'';
+  position:absolute;inset:0;
+  background:var(--fuel-glow, rgba(78,205,196,0.05));
+  opacity:0;
+  transition:opacity 0.3s;
+}
+.fuel-card:hover::before{opacity:1;}
+.fuel-card:hover{transform:translateY(-6px);}
+
+.fuel-card.fc {--fuel-glow:var(--fuel-c-dim); --fuel-col:var(--fuel-c);}
+.fuel-card.fh {--fuel-glow:var(--fuel-h-dim); --fuel-col:var(--fuel-h);}
+.fuel-card.fs {--fuel-glow:var(--fuel-s-dim); --fuel-col:var(--fuel-s);}
+
+.fuel-card.selected {
+  border-color:var(--fuel-col);
+  background:var(--fuel-glow);
+  transform:translateY(-6px) scale(1.02);
+  box-shadow:0 0 30px rgba(0,0,0,0.3), 0 0 0 1px var(--fuel-col);
+}
+
+.fuel-icon {font-size:2.5rem;margin-bottom:12px;display:block;}
+.fuel-type {
+  font-family:'Space Mono',monospace;
+  font-size:0.6rem;letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--muted);margin-bottom:6px;
+}
+.fuel-name {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.6rem;letter-spacing:0.05em;
+  color:var(--fuel-col);
+  transition:all 0.3s;
+  margin-bottom:4px;
+}
+.fuel-formula {
+  font-family:'Space Mono',monospace;
+  font-size:0.8rem;color:var(--text);
+  opacity:0.7;
+}
+
+/* Chemistry explorer (appears when fuel selected) */
+.chem-explorer {
+  display:none;
+  animation:phaseIn 0.5s ease;
+}
+.chem-explorer.visible{display:block;}
+
+/* Equation display */
+.equation-box {
+  border-radius:16px;
+  padding:32px;
+  margin-bottom:24px;
+  position:relative;
+  overflow:hidden;
+  border:1px solid;
+}
+.eq-c{border-color:rgba(255,140,66,0.3);background:rgba(255,140,66,0.05);}
+.eq-h{border-color:rgba(199,125,255,0.3);background:rgba(199,125,255,0.05);}
+.eq-s{border-color:rgba(82,183,136,0.3);background:rgba(82,183,136,0.05);}
+
+.eq-label {
+  font-family:'Space Mono',monospace;
+  font-size:0.68rem;letter-spacing:0.25em;
+  text-transform:uppercase;color:#7a8090;
+  margin-bottom:16px;
+}
+
+.equation {
+  font-family:'Space Mono',monospace;
+  font-size:clamp(0.92rem,2.2vw,1.2rem);
+  line-height:2.2;
+  color:#ffffff;
+  letter-spacing:0.03em;
+}
+.eq-arrow{color:var(--muted);}
+
+/* Bond animation area */
+.bond-viz {
+  background:rgba(0,0,0,0.3);
+  border-radius:12px;
+  padding:24px;
+  margin-top:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:40px;
+  flex-wrap:wrap;
+  min-height:160px;
+}
+
+.bond-side {text-align:center;}
+.bond-label {
+  font-family:'Space Mono',monospace;
+  font-size:0.6rem;letter-spacing:0.2em;
+  text-transform:uppercase;
+  margin-bottom:12px;
+}
+.bond-label.break-l{color:#f87171;}
+.bond-label.form-l{color:#34d399;}
+
+/* Animated molecule dots */
+.mol-display {
+  display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+  justify-content:center;max-width:200px;
+}
+.atom {
+  width:36px;height:36px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Space Mono',monospace;
+  font-size:0.65rem;font-weight:700;
+  border:2px solid;
+  animation:atomPulse 2s ease-in-out infinite;
+  position:relative;
+}
+.atom-C{background:rgba(100,100,120,0.4);border-color:#888;color:#ccc;}
+.atom-H{background:rgba(200,200,255,0.15);border-color:#aab;color:#cce;}
+.atom-O{background:rgba(255,80,80,0.2);border-color:#f87171;color:#fca5a5;}
+.atom-N{background:rgba(80,120,255,0.2);border-color:#818cf8;color:#c7d2fe;}
+.atom-Al{background:rgba(180,180,180,0.2);border-color:#d1d5db;color:#f3f4f6;}
+.atom-Cl{background:rgba(80,200,80,0.2);border-color:#86efac;color:#bbf7d0;}
+
+@keyframes atomPulse {
+  0%,100%{transform:scale(1);box-shadow:none;}
+  50%{transform:scale(1.08);box-shadow:0 0 10px currentColor;}
+}
+
+.bond-line {
+  width:20px;height:2px;
+  background:var(--muted);
+  display:inline-block;vertical-align:middle;
+  margin:0 3px;
+  position:relative;
+}
+.bond-double{height:6px;background:transparent;
+  border-top:2px solid var(--muted);border-bottom:2px solid var(--muted);}
+.bond-triple{position:relative;}
+
+.bond-arrow {
+  font-size:2rem;color:var(--muted);
+  animation:arrowPulse 1.5s ease-in-out infinite;
+}
+@keyframes arrowPulse{
+  0%,100%{opacity:0.4;transform:scaleX(1);}
+  50%{opacity:1;transform:scaleX(1.15);}
+}
+
+.energy-badge {
+  text-align:center;
+  font-family:'Space Mono',monospace;
+  font-size:0.75rem;
+  padding:10px 20px;
+  border-radius:8px;
+  margin-top:12px;
+  display:inline-block;
+}
+.eb-c{background:rgba(255,140,66,0.15);color:var(--fuel-c);border:1px solid rgba(255,140,66,0.3);}
+.eb-h{background:rgba(199,125,255,0.15);color:var(--fuel-h);border:1px solid rgba(199,125,255,0.3);}
+.eb-s{background:rgba(82,183,136,0.15);color:var(--fuel-s);border:1px solid rgba(82,183,136,0.3);}
+
+/* Three step explainer */
+.steps-row {
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:16px;margin:24px 0;
+}
+@media(max-width:600px){.steps-row{grid-template-columns:1fr;}}
+
+.step-card {
+  background:rgba(0,0,0,0.25);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px;
+  position:relative;
+}
+.step-n {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:3rem;line-height:1;
+  position:absolute;top:10px;right:14px;
+  opacity:0.07;
+}
+.step-icon{font-size:1.8rem;margin-bottom:10px;display:block;}
+.step-title {
+  font-family:'Space Mono',monospace;
+  font-size:0.65rem;letter-spacing:0.15em;
+  text-transform:uppercase;margin-bottom:8px;
+}
+.step-body{font-size:0.88rem;color:#b0b8cc;line-height:1.7;}
+
+/* Stats row */
+.stats-grid {
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:16px;margin:24px 0;
+}
+@media(max-width:700px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
+
+.stat-cell {
+  background:rgba(0,0,0,0.25);
+  border:1px solid var(--border);
+  border-radius:12px;padding:18px;
+  text-align:center;
+}
+.stat-val {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2.4rem;letter-spacing:0.05em;
+  line-height:1;margin-bottom:6px;
+}
+.sc{color:var(--fuel-c); text-shadow: 0 0 20px rgba(255,140,66,0.4);}
+.sh{color:var(--fuel-h); text-shadow: 0 0 20px rgba(199,125,255,0.4);}
+.ss{color:var(--fuel-s); text-shadow: 0 0 20px rgba(82,183,136,0.4);}
+.stat-unit {
+  font-family:'Space Mono',monospace;
+  font-size:0.68rem;letter-spacing:0.12em;
+  color:#8891a8;text-transform:uppercase;
+}
+
+/* ISP comparison bar */
+.isp-section {
+  background:rgba(0,0,0,0.2);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:24px;margin:24px 0;
+}
+.isp-title {
+  font-family:'Space Mono',monospace;
+  font-size:0.65rem;letter-spacing:0.2em;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:20px;
+}
+.isp-row {
+  display:grid;grid-template-columns:140px 1fr 60px;
+  align-items:center;gap:14px;margin-bottom:16px;
+}
+@media(max-width:500px){.isp-row{grid-template-columns:1fr;}}
+.isp-name{font-size:0.85rem;font-weight:600;}
+.isp-sub{font-size:0.7rem;color:var(--muted);font-weight:300;display:block;}
+.bar-track {
+  height:10px;background:rgba(255,255,255,0.05);
+  border-radius:6px;overflow:hidden;
+}
+.bar-fill {
+  height:100%;border-radius:6px;
+  width:0;
+  transition:width 1.4s cubic-bezier(0.34,1.1,0.64,1);
+}
+.bf-c{background:linear-gradient(90deg,var(--fuel-c),#ffb347);box-shadow:0 0 8px rgba(255,140,66,0.4);}
+.bf-h{background:linear-gradient(90deg,var(--fuel-h),#e9d5ff);box-shadow:0 0 8px rgba(199,125,255,0.4);}
+.bf-s{background:linear-gradient(90deg,var(--fuel-s),#a7f3d0);box-shadow:0 0 8px rgba(82,183,136,0.4);}
+.bf-lh{background:linear-gradient(90deg,var(--cyan),#a5f3fc);box-shadow:0 0 8px rgba(78,205,196,0.4);}
+.isp-num{font-family:'Space Mono',monospace;font-size:0.82rem;text-align:right;}
+
+/* Pros/Cons */
+.pc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0;}
+@media(max-width:540px){.pc-grid{grid-template-columns:1fr;}}
+.pc-card{background:rgba(0,0,0,0.2);border-radius:12px;padding:20px;border:1px solid var(--border);}
+.pc-head{font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:14px;}
+.pc-pro .pc-head{color:#34d399;}
+.pc-con .pc-head{color:#f87171;}
+.pc-item{display:flex;align-items:flex-start;gap:8px;font-size:0.9rem;color:#b0b8cc;margin-bottom:10px;line-height:1.6;}
+.pc-item::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:7px;}
+.pc-pro .pc-item::before{background:#34d399;}
+.pc-con .pc-item::before{background:#f87171;}
+
+/* PEECS box */
+.peecs {
+  border-radius:14px;padding:24px;margin:24px 0;border:1px solid;
+}
+.peecs-c{border-color:rgba(255,140,66,0.25);background:rgba(255,140,66,0.05);}
+.peecs-h{border-color:rgba(199,125,255,0.25);background:rgba(199,125,255,0.05);}
+.peecs-s{border-color:rgba(82,183,136,0.25);background:rgba(82,183,136,0.05);}
+.peecs-title{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.peecs p{font-size:0.93rem;color:#b8bfd0;line-height:1.8;font-weight:300;}
+
+/* Combustion temp gauge */
+.gauge-wrap{display:flex;align-items:center;justify-content:center;gap:30px;flex-wrap:wrap;padding:20px 0;}
+.gauge {
+  width:120px;height:120px;
+  position:relative;display:flex;align-items:center;justify-content:center;
+}
+.gauge svg{position:absolute;inset:0;}
+.gauge-val{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.5rem;line-height:1;text-align:center;
+  position:relative;z-index:1;
+}
+.gauge-val span{display:block;font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;}
+
+.gauge-arc {
+  stroke-linecap:round;
+  fill:none;
+  stroke-width:8;
+  stroke:rgba(255,255,255,0.06);
+}
+.gauge-fill {
+  stroke-linecap:round;
+  fill:none;
+  stroke-width:8;
+  stroke-dasharray:283;
+  stroke-dashoffset:283;
+  transition:stroke-dashoffset 1.5s cubic-bezier(0.34,1.1,0.64,1);
+  transform:rotate(-90deg);
+  transform-origin:50% 50%;
+}
+
+/* O/F Ratio slider */
+.of-slider-wrap {
+  background:rgba(0,0,0,0.2);
+  border-radius:12px;padding:24px;
+  margin:16px 0;
+  border:1px solid var(--border);
+}
+.of-title{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+.slider-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+input[type=range]{
+  -webkit-appearance:none;
+  flex:1;min-width:150px;
+  height:6px;border-radius:3px;
+  background:rgba(255,255,255,0.1);
+  outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:20px;height:20px;
+  border-radius:50%;
+  background:var(--fuel-c);
+  box-shadow:0 0 10px rgba(255,140,66,0.5);
+  cursor:pointer;
+  transition:transform 0.2s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.of-val{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;color:var(--fuel-c);
+  min-width:60px;text-align:center;
+}
+.of-result{
+  font-size:0.82rem;color:#8891a8;
+  margin-top:12px;line-height:1.6;
+  min-height:40px;
+}
+
+/* ═══════════════════════════════════════════════
+   PHASE 3 — LAUNCH
+═══════════════════════════════════════════════ */
+.launch-screen{
+  text-align:center;
+  padding:60px 20px;
+  min-height:500px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  overflow:hidden;
+}
+
+/* Launch pad ground */
+.launch-pad {
+  position:relative;
+  width:300px;
+  height:420px;
+  margin:0 auto;
+}
+
+/* The SVG rocket that shoots up */
+.launch-rocket-svg {
+  position:absolute;
+  bottom:22px;          /* sits exactly on top of the 22px pad-base */
+  left:50%;
+  transform:translateX(-50%);
+  transition:none;
+}
+.launch-rocket-svg.firing {
+  animation: rocketFire 3.2s cubic-bezier(0.4,0,1,1) forwards;
+}
+@keyframes rocketFire {
+  0%   { bottom:22px;  opacity:1; transform:translateX(-50%) scale(1); }
+  15%  { bottom:16px;  opacity:1; transform:translateX(-50%) scale(1.03); }
+  30%  { bottom:80px;  opacity:1; transform:translateX(-50%) scale(0.97); }
+  70%  { bottom:340px; opacity:1; transform:translateX(-50%) scale(0.7); }
+  100% { bottom:660px; opacity:0; transform:translateX(-50%) scale(0.3); }
+}
+
+/* Smoke puffs */
+.smoke-container {
+  position:absolute;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  width:120px;
+  height:100px;
+  pointer-events:none;
+}
+.smoke-puff {
+  position:absolute;
+  border-radius:50%;
+  background: radial-gradient(circle, rgba(200,200,210,0.55), transparent 70%);
+  animation: smokeDrift 2s ease-out forwards;
+  opacity:0;
+}
+@keyframes smokeDrift {
+  0%   { opacity:0.7; transform:scale(0.3) translate(0,0); }
+  50%  { opacity:0.4; }
+  100% { opacity:0;   transform:scale(2.5) translate(var(--dx,20px), -60px); }
+}
+
+/* Launch pad base */
+.pad-base {
+  position:absolute;
+  bottom:0; left:50%;
+  transform:translateX(-50%);
+  width:140px; height:22px;
+  background: linear-gradient(135deg, #2a2f4a, #1a1f35);
+  border-radius:4px;
+  border:1px solid rgba(78,205,196,0.3);
+  box-shadow: 0 0 20px rgba(78,205,196,0.1);
+}
+.pad-arm-l, .pad-arm-r {
+  position:absolute;
+  bottom:22px;
+  width:12px; height:70px;
+  background: linear-gradient(to top, #2a2f4a, #3a4060);
+  border:1px solid rgba(78,205,196,0.25);
+  border-radius:3px;
+}
+.pad-arm-l { left:32%; transform-origin: bottom center; }
+.pad-arm-r { right:32%; transform-origin: bottom center; }
+.pad-arm-l.release { animation: armSwingL 0.6s ease-out 0.5s forwards; }
+.pad-arm-r.release { animation: armSwingR 0.6s ease-out 0.5s forwards; }
+@keyframes armSwingL { to { transform: rotate(-60deg); } }
+@keyframes armSwingR { to { transform: rotate( 60deg); } }
+
+/* Countdown display */
+.countdown-display {
+  margin-top:24px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:4rem;
+  letter-spacing:0.1em;
+  color:var(--red);
+  text-shadow:0 0 30px rgba(255,107,107,0.7), 0 0 60px rgba(255,107,107,0.3);
+  transition:all 0.2s ease;
+  min-height:80px;
+}
+.countdown-display.go {
+  color:var(--cyan);
+  text-shadow:0 0 30px rgba(78,205,196,0.9), 0 0 60px rgba(78,205,196,0.4);
+  animation: countGrow 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes countGrow {
+  from { transform:scale(0.6); }
+  to   { transform:scale(1); }
+}
+
+.launch-status {
+  font-family:'Space Mono',monospace;
+  font-size:0.7rem;
+  letter-spacing:0.25em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-top:12px;
+  min-height:20px;
+}
+
+/* Screen flash on ignition */
+.ignition-flash {
+  position:fixed; inset:0;
+  background:rgba(255,140,66,0.18);
+  pointer-events:none;
+  opacity:0;
+  z-index:9999;
+}
+.ignition-flash.flash { animation: screenFlash 0.5s ease-out forwards; }
+@keyframes screenFlash {
+  0%   { opacity:1; }
+  100% { opacity:0; }
+}
+
+/* Old simple class kept for JS compat */
+.launch-countdown{display:none;}
+
+
+/* Dossier */
+.dossier{display:none;}
+.dossier.visible{display:block;animation:phaseIn 0.6s ease;}
+
+.match-banner {
+  border-radius:16px;padding:36px;
+  text-align:center;
+  background:linear-gradient(135deg,rgba(78,205,196,0.1),rgba(255,107,107,0.1));
+  border:1px solid rgba(78,205,196,0.3);
+  margin-bottom:32px;
+}
+.match-eyebrow{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.match-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2.5rem,7vw,5rem);
+  letter-spacing:0.04em;
+  background:linear-gradient(135deg,var(--cyan),var(--red));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:8px;
+}
+.match-sub{font-family:'Space Mono',monospace;font-size:0.75rem;color:var(--muted);letter-spacing:0.15em;margin-bottom:20px;}
+.match-desc{font-size:0.95rem;color:#a0a8bc;line-height:1.8;max-width:700px;margin:0 auto;font-weight:300;}
+
+.dossier-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;}
+@media(max-width:650px){.dossier-grid{grid-template-columns:1fr;}}
+
+.spec-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.spec-row:last-child{border-bottom:none;}
+.spec-k{color:var(--muted);font-size:0.85rem;}
+.spec-v{font-family:'Space Mono',monospace;font-size:0.82rem;color:var(--cyan);}
+
+.history-block {
+  border-left:3px solid var(--red);
+  padding:20px 24px;
+  background:rgba(255,107,107,0.06);
+  border-radius:0 12px 12px 0;
+  margin:24px 0;
+}
+.history-title{color:var(--red);font-weight:600;margin-bottom:10px;font-size:0.9rem;}
+.history-body{font-size:0.88rem;color:#a0a8bc;line-height:1.8;font-weight:300;}
+
+/* Chemistry summary in dossier */
+.chem-summary {
+  background:rgba(0,0,0,0.25);
+  border:1px solid var(--border);
+  border-radius:14px;padding:24px;margin:24px 0;
+}
+.chem-summary h3{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+.chem-eq-final{
+  font-family:'Space Mono',monospace;
+  font-size:clamp(0.8rem,1.8vw,1rem);
+  color:#c4c9d8;
+  background:rgba(0,0,0,0.3);
+  padding:16px;border-radius:8px;
+  border-left:3px solid var(--cyan);
+  margin-bottom:16px;
+  line-height:1.8;
+}
+
+/* Citations */
+/* ── BULLET LISTS ── */
+.step-bullets, .peecs-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+}
+.step-bullets li, .peecs-bullets li {
+  font-size: 0.85rem;
+  color: #b0b8cc;
+  line-height: 1.6;
+  padding: 3px 0 3px 16px;
+  position: relative;
+}
+.step-bullets li::before, .peecs-bullets li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* ── INNO PROJECT SECTION ── */
+.inno-section {
+  background: var(--surface);
+  border: 2px solid rgba(255,107,107,0.35);
+  border-radius: 16px;
+  padding: 32px;
+  margin-top: 24px;
+  box-shadow: 0 0 40px rgba(255,107,107,0.06);
+}
+.inno-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.inno-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(255,107,107,0.15);
+  color: var(--red);
+  border: 1px solid rgba(255,107,107,0.3);
+  flex-shrink: 0;
+}
+.inno-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.05em;
+  color: var(--red);
+  line-height: 1;
+}
+.inno-intro {
+  font-size: 0.95rem;
+  color: #b8bfd0;
+  line-height: 1.75;
+  margin-bottom: 28px;
+  font-weight: 300;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.inno-points {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.inno-point {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.inno-point-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--red);
+  opacity: 0.25;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+  padding-top: 2px;
+}
+.inno-point-body { flex: 1; }
+.inno-point-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+.inno-point-text {
+  font-size: 0.92rem;
+  color: #b8bfd0;
+  line-height: 1.8;
+  font-weight: 300;
+  margin-bottom: 14px;
+}
+.inno-point-text:last-child { margin-bottom: 0; }
+.inno-equation {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(0.82rem, 1.8vw, 1rem);
+  color: #fff;
+  background: rgba(0,0,0,0.3);
+  border-left: 3px solid var(--red);
+  border-radius: 0 8px 8px 0;
+  padding: 14px 20px;
+  margin: 14px 0;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+}
+.inno-eq-state {
+  font-size: 0.75em;
+  color: var(--muted);
+  vertical-align: sub;
+}
+.inno-arrow { color: var(--muted); margin: 0 8px; }
+
+.citations{
+  background: var(--surface);
+  border: 2px solid rgba(78,205,196,0.4);
+  border-radius: 14px;
+  padding: 32px;
+  margin-top: 40px;
+  box-shadow: 0 0 30px rgba(78,205,196,0.08);
+}
+.cite-head{
+  font-family:'Space Mono',monospace;
+  font-size:0.8rem;
+  letter-spacing:0.25em;
+  text-transform:uppercase;
+  color:var(--cyan);
+  margin-bottom:24px;
+  padding-bottom:12px;
+  border-bottom:1px solid rgba(78,205,196,0.3);
+}
+.cite-item{
+  font-size:0.92rem;
+  color:#d4d8e8;
+  line-height:2;
+  padding:14px 0 14px 16px;
+  border-bottom:1px solid rgba(255,255,255,0.07);
+  font-weight:300;
+  border-left: 3px solid transparent;
+  transition: border-color 0.2s;
+}
+.cite-item:hover{ border-left-color: var(--cyan); }
+.cite-item:last-child{border-bottom:none;}
+
+/* ═══════════════════════════════════════════════
+   NAV BUTTONS
+═══════════════════════════════════════════════ */
+.nav-bar{
+  display:flex;justify-content:center;align-items:center;
+  gap:16px;margin-top:40px;flex-wrap:wrap;
+}
+.btn {
+  font-family:'Space Mono',monospace;
+  font-size:0.75rem;letter-spacing:0.12em;
+  text-transform:uppercase;
+  padding:14px 36px;
+  border-radius:8px;
+  border:none;cursor:pointer;
+  transition:all 0.3s ease;
+  font-weight:700;
+}
+.btn-primary {
+  background:linear-gradient(135deg,var(--cyan),#44a6a0);
+  color:var(--bg);
+  box-shadow:0 4px 20px rgba(78,205,196,0.3);
+}
+.btn-primary:hover:not(:disabled){
+  transform:translateY(-2px);
+  box-shadow:0 6px 30px rgba(78,205,196,0.5);
+}
+.btn-danger {
+  background:linear-gradient(135deg,var(--red),#ee5a5a);
+  color:#fff;
+  box-shadow:0 4px 20px rgba(255,107,107,0.3);
+}
+.btn-danger:hover:not(:disabled){
+  transform:translateY(-2px);
+  box-shadow:0 6px 30px rgba(255,107,107,0.5);
+}
+.btn-ghost {
+  background:transparent;
+  color:var(--muted);
+  border:1px solid var(--border);
+}
+.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
+.btn:disabled{opacity:0.3;cursor:not-allowed;transform:none;}
+.hidden{display:none!important;}
+
+/* Alert shake */
+.alert {
+  background:rgba(255,107,107,0.15);
+  border:1px solid rgba(255,107,107,0.4);
+  border-radius:10px;padding:14px 20px;
+  color:var(--red);text-align:center;
+  font-size:0.88rem;
+  animation:shake 0.4s ease;
+  margin:16px 0;
+}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}</style>
+</head>
+<body>
+
+<div id="starfield"></div>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <p class="hero-eyebrow">Cold War Era Engineering Simulator</p>
+    <h1>
+      <span class="line1">Space Race</span>
+      <span class="line2">Rocket Builder × Propellant Chemistry</span>
+    </h1>
+    <p class="hero-sub">Assemble a Cold War rocket, choose its propellant chemistry, and discover which real missile you built.</p>
+  </div>
+
+  <!-- STEPPER -->
+  <div class="stepper">
+    <div class="step active" id="step1">
+      <div class="step-num">1</div>
+      <div class="step-label">Assembly</div>
+    </div>
+    <div class="step" id="step2">
+      <div class="step-num">2</div>
+      <div class="step-label">Chemistry Lab</div>
+    </div>
+    <div class="step" id="step3">
+      <div class="step-num">3</div>
+      <div class="step-label">Launch</div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PHASE 1 ══════════════ -->
+  <div id="phase1" class="phase active">
+
+    <div class="progress-row" style="justify-content:center;margin-bottom:28px;">
+      <div class="prog-pill" id="pill-structure"><div class="pill-dot"></div>Structure</div>
+      <div class="prog-pill" id="pill-engine"><div class="pill-dot"></div>Engine</div>
+      <div class="prog-pill" id="pill-deploy"><div class="pill-dot"></div>Deployment</div>
+    </div>
+
+    <div class="assembly-grid">
+
+      <!-- DRAWER -->
+      <div class="card">
+
+        <div class="comp-section">
+          <div class="comp-section-label">Structural Config</div>
+          <div class="comp-option" data-cat="structure" data-val="r7">
+            <div class="opt-name">Clustered Strap-on Boosters</div>
+            <div class="opt-desc">4 liquid-fueled boosters around central core stage</div>
+            <div class="opt-tag">USSR Design</div>
+          </div>
+          <div class="comp-option" data-cat="structure" data-val="atlas">
+            <div class="opt-name">Balloon Tank Construction</div>
+            <div class="opt-desc">Pressurized ultra-thin steel shell (0.25mm walls)</div>
+            <div class="opt-tag">USA Innovation</div>
+          </div>
+          <div class="comp-option" data-cat="structure" data-val="monolith">
+            <div class="opt-name">Solid Monolith Body</div>
+            <div class="opt-desc">Single-stage unified pressure vessel</div>
+            <div class="opt-tag">Standard</div>
+          </div>
+        </div>
+
+        <div class="comp-section">
+          <div class="comp-section-label">Engine Architecture</div>
+          <div class="comp-option" data-cat="engine" data-val="vernier">
+            <div class="opt-name">Multi-Chamber Vernier Thrusters</div>
+            <div class="opt-desc">Swiveling control nozzles for precision guidance</div>
+            <div class="opt-tag">High Precision</div>
+          </div>
+          <div class="comp-option" data-cat="engine" data-val="stage-half">
+            <div class="opt-name">Stage-and-a-Half Config</div>
+            <div class="opt-desc">Booster + sustainer simultaneous ignition</div>
+            <div class="opt-tag">Efficiency</div>
+          </div>
+          <div class="comp-option" data-cat="engine" data-val="single">
+            <div class="opt-name">Static Single Nozzle</div>
+            <div class="opt-desc">Fixed-gimbal single engine design</div>
+            <div class="opt-tag">Simplicity</div>
+          </div>
+        </div>
+
+        <div class="comp-section">
+          <div class="comp-section-label">Deployment Method</div>
+          <div class="comp-option" data-cat="deploy" data-val="silo">
+            <div class="opt-name">Surface Pad / Silo Launch</div>
+            <div class="opt-desc">Fixed installation with fueling infrastructure</div>
+            <div class="opt-tag">Strategic</div>
+          </div>
+          <div class="comp-option" data-cat="deploy" data-val="mobile">
+            <div class="opt-name">Mobile Transport Erector</div>
+            <div class="opt-desc">Road-mobile launcher, rapid deployment</div>
+            <div class="opt-tag">Tactical</div>
+          </div>
+        </div>
+
+      </div><!-- /DRAWER -->
+
+      <!-- BLUEPRINT -->
+      <div class="drafting">
+        <div class="drafting-label">BLUEPRINT SCHEMATIC</div>
+        <div class="drafting-label2" id="blueprintId">REV 00 — UNCLASSIFIED</div>
+
+        <svg id="rocketSvg" width="560" height="520" viewBox="0 0 560 520" style="overflow:visible;">
+
+          <!-- NOSE -->
+          <g id="nose" style="opacity:0;transition:opacity 0.6s, transform 0.6s;transform:scale(0.7);transform-origin:300px 110px;">
+            <polygon points="300,50 258,155 342,155" fill="rgba(78,205,196,0.05)" stroke="rgba(78,205,196,0.85)" stroke-width="2" filter="drop-shadow(0 0 6px rgba(78,205,196,0.4))"/>
+            <line x1="300" y1="50" x2="300" y2="155" stroke="rgba(78,205,196,0.4)" stroke-width="1"/>
+            <line x1="268" y1="97" x2="332" y2="97" stroke="rgba(78,205,196,0.4)" stroke-width="1"/>
+            <line x1="262" y1="128" x2="338" y2="128" stroke="rgba(78,205,196,0.4)" stroke-width="1"/>
+          </g>
+
+          <!-- BODY -->
+          <g id="body" style="opacity:0;transition:opacity 0.6s 0.1s, transform 0.6s 0.1s;transform:scale(0.7);transform-origin:300px 300px;">
+            <rect x="258" y="155" width="84" height="285" rx="3" fill="rgba(78,205,196,0.04)" stroke="rgba(78,205,196,0.8)" stroke-width="2" filter="drop-shadow(0 0 6px rgba(78,205,196,0.3))"/>
+            <line x1="258" y1="205" x2="342" y2="205" stroke="rgba(78,205,196,0.3)" stroke-width="1"/>
+            <line x1="258" y1="255" x2="342" y2="255" stroke="rgba(78,205,196,0.3)" stroke-width="1"/>
+            <line x1="258" y1="305" x2="342" y2="305" stroke="rgba(78,205,196,0.3)" stroke-width="1"/>
+            <line x1="258" y1="355" x2="342" y2="355" stroke="rgba(78,205,196,0.3)" stroke-width="1"/>
+            <line x1="258" y1="405" x2="342" y2="405" stroke="rgba(78,205,196,0.3)" stroke-width="1"/>
+            <line x1="278" y1="155" x2="278" y2="440" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <line x1="322" y1="155" x2="322" y2="440" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <rect x="263" y="220" width="74" height="75" rx="2" fill="rgba(78,205,196,0.06)" stroke="rgba(78,205,196,0.5)" stroke-width="1.5"/>
+            <circle cx="278" cy="175" r="2" fill="rgba(78,205,196,0.7)"/>
+            <circle cx="322" cy="175" r="2" fill="rgba(78,205,196,0.7)"/>
+            <circle cx="278" cy="330" r="2" fill="rgba(78,205,196,0.7)"/>
+            <circle cx="322" cy="330" r="2" fill="rgba(78,205,196,0.7)"/>
+          </g>
+
+          <!-- FINS -->
+          <g id="fins" style="opacity:0;transition:opacity 0.6s 0.2s, transform 0.6s 0.2s;transform:scale(0.7);transform-origin:300px 420px;">
+            <polygon points="342,375 365,440 342,440" fill="rgba(78,205,196,0.08)" stroke="rgba(78,205,196,0.7)" stroke-width="1.5"/>
+            <polygon points="258,375 235,440 258,440" fill="rgba(78,205,196,0.08)" stroke="rgba(78,205,196,0.7)" stroke-width="1.5"/>
+            <line x1="342" y1="375" x2="360" y2="425" stroke="rgba(78,205,196,0.3)" stroke-width="1"/>
+            <line x1="258" y1="375" x2="240" y2="425" stroke="rgba(78,205,196,0.3)" stroke-width="1"/>
+          </g>
+
+          <!-- ENGINE -->
+          <g id="engine" style="opacity:0;transition:opacity 0.6s 0.3s, transform 0.6s 0.3s;transform:scale(0.7);transform-origin:300px 470px;">
+            <rect x="263" y="440" width="74" height="28" rx="3" fill="rgba(255,107,107,0.15)" stroke="rgba(255,107,107,0.8)" stroke-width="2" filter="drop-shadow(0 0 5px rgba(255,107,107,0.3))"/>
+            <path d="M 268 468 L 263 482 L 268 492 L 280 497 L 320 497 L 332 492 L 337 482 L 332 468 Z" fill="rgba(255,107,107,0.2)" stroke="rgba(255,107,107,0.85)" stroke-width="1.5"/>
+            <line x1="278" y1="468" x2="276" y2="490" stroke="rgba(255,107,107,0.4)" stroke-width="1"/>
+            <line x1="290" y1="468" x2="289" y2="493" stroke="rgba(255,107,107,0.4)" stroke-width="1"/>
+            <line x1="300" y1="468" x2="300" y2="494" stroke="rgba(255,107,107,0.4)" stroke-width="1"/>
+            <line x1="310" y1="468" x2="311" y2="493" stroke="rgba(255,107,107,0.4)" stroke-width="1"/>
+            <line x1="322" y1="468" x2="324" y2="490" stroke="rgba(255,107,107,0.4)" stroke-width="1"/>
+          </g>
+
+          <!-- BOOSTERS (shown for r7 structure) -->
+          <g id="boosters" style="opacity:0;transition:opacity 0.6s 0.4s;">
+            <!-- Left booster -->
+            <rect x="186" y="215" width="50" height="200" rx="3" fill="rgba(78,205,196,0.05)" stroke="rgba(78,205,196,0.65)" stroke-width="2" filter="drop-shadow(0 0 4px rgba(78,205,196,0.2))"/>
+            <line x1="186" y1="265" x2="236" y2="265" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <line x1="186" y1="315" x2="236" y2="315" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <line x1="186" y1="365" x2="236" y2="365" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <path d="M 191 415 L 188 426 L 191 433 L 201 436 L 221 436 L 231 433 L 234 426 L 231 415 Z" fill="rgba(255,107,107,0.15)" stroke="rgba(255,107,107,0.7)" stroke-width="1.5"/>
+            <line x1="236" y1="275" x2="258" y2="275" stroke="rgba(78,205,196,0.3)" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <line x1="236" y1="355" x2="258" y2="355" stroke="rgba(78,205,196,0.3)" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <!-- Right booster -->
+            <rect x="364" y="215" width="50" height="200" rx="3" fill="rgba(78,205,196,0.05)" stroke="rgba(78,205,196,0.65)" stroke-width="2" filter="drop-shadow(0 0 4px rgba(78,205,196,0.2))"/>
+            <line x1="364" y1="265" x2="414" y2="265" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <line x1="364" y1="315" x2="414" y2="315" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <line x1="364" y1="365" x2="414" y2="365" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <path d="M 369 415 L 366 426 L 369 433 L 379 436 L 399 436 L 409 433 L 412 426 L 409 415 Z" fill="rgba(255,107,107,0.15)" stroke="rgba(255,107,107,0.7)" stroke-width="1.5"/>
+            <line x1="342" y1="275" x2="364" y2="275" stroke="rgba(78,205,196,0.3)" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <line x1="342" y1="355" x2="364" y2="355" stroke="rgba(78,205,196,0.3)" stroke-width="1.5" stroke-dasharray="3,3"/>
+          </g>
+
+          <!-- CALLOUT LINES (appear with selections) -->
+          <g id="callout-structure" style="opacity:0;transition:opacity 0.5s;">
+            <line x1="235" y1="270" x2="115" y2="210" stroke="rgba(255,107,107,0.5)" stroke-width="1.5" stroke-dasharray="4,4"/>
+            <rect x="10" y="188" width="100" height="40" rx="3" fill="rgba(8,11,24,0.95)" stroke="rgba(78,205,196,0.5)" stroke-width="1.5"/>
+            <text x="16" y="203" fill="rgba(78,205,196,0.7)" font-size="9" font-family="monospace">STRUCTURE</text>
+            <text id="lbl-structure" x="16" y="218" fill="#ff8c42" font-size="9" font-family="monospace" font-weight="bold">—</text>
+          </g>
+          <g id="callout-engine" style="opacity:0;transition:opacity 0.5s;">
+            <line x1="300" y1="497" x2="300" y2="545" stroke="rgba(255,107,107,0.5)" stroke-width="1.5" stroke-dasharray="4,4"/>
+            <rect x="248" y="549" width="104" height="40" rx="3" fill="rgba(8,11,24,0.95)" stroke="rgba(78,205,196,0.5)" stroke-width="1.5"/>
+            <text x="254" y="564" fill="rgba(78,205,196,0.7)" font-size="9" font-family="monospace">ENGINE</text>
+            <text id="lbl-engine" x="254" y="579" fill="#ff8c42" font-size="9" font-family="monospace" font-weight="bold">—</text>
+          </g>
+          <g id="callout-deploy" style="opacity:0;transition:opacity 0.5s;">
+            <line x1="342" y1="310" x2="462" y2="250" stroke="rgba(255,107,107,0.5)" stroke-width="1.5" stroke-dasharray="4,4"/>
+            <rect x="466" y="228" width="104" height="40" rx="3" fill="rgba(8,11,24,0.95)" stroke="rgba(78,205,196,0.5)" stroke-width="1.5"/>
+            <text x="472" y="243" fill="rgba(78,205,196,0.7)" font-size="9" font-family="monospace">DEPLOY</text>
+            <text id="lbl-deploy" x="472" y="258" fill="#ff8c42" font-size="9" font-family="monospace" font-weight="bold">—</text>
+          </g>
+
+        </svg>
+
+        <div class="status-bar" id="statusBar">
+          Select components from the left panel to begin assembly
+        </div>
+      </div><!-- /DRAFTING -->
+
+    </div><!-- /ASSEMBLY GRID -->
+  </div><!-- /PHASE 1 -->
+
+  <!-- ══════════════ PHASE 2 ══════════════ -->
+  <div id="phase2" class="phase">
+
+    <div class="lab-header">
+      <h2>⚗️ Propellant Chemistry Lab</h2>
+      <p>Three propellant combinations powered the Space Race. Select one to explore its chemistry — reactions, bond energies, performance, and real mission use.</p>
+    </div>
+
+    <!-- FUEL SELECTOR -->
+    <div class="fuel-selector">
+      <div class="fuel-card fc" onclick="selectFuel('combustion',this)">
+        <span class="fuel-icon">🔥</span>
+        <div class="fuel-type">Type 01 — Kerolox</div>
+        <div class="fuel-name">RP-1 / LOX</div>
+        <div class="fuel-formula">Saturn V First Stage · F-1 Engines</div>
+      </div>
+      <div class="fuel-card fh" onclick="selectFuel('hypergolic',this)">
+        <span class="fuel-icon">☣️</span>
+        <div class="fuel-type">Type 02 — Hypergolic</div>
+        <div class="fuel-name">N₂H₄ / N₂O₄</div>
+        <div class="fuel-formula">Apollo CSM · Lunar Module</div>
+      </div>
+      <div class="fuel-card fs" onclick="selectFuel('hydrogen',this)">
+        <span class="fuel-icon">💧</span>
+        <div class="fuel-type">Type 03 — Hydrolox</div>
+        <div class="fuel-name">LH₂ / LOX</div>
+        <div class="fuel-formula">Saturn V Upper Stages · J-2 Engines</div>
+      </div>
+    </div>
+
+    <!-- CHEMISTRY EXPLORER — COMBUSTION (RP-1/LOX) -->
+    <div id="chem-combustion" class="chem-explorer">
+
+
+      <!-- RP-1/LOX: all content strictly from PDF -->
+      <div class="equation-box eq-c">
+        <div class="eq-label">⚛ Balanced Combustion Equation (Dodecane Surrogate for RP-1)</div>
+        <div class="equation">
+          2 C₁₂H₂₆<span style="color:var(--muted);font-size:0.8em;">(l)</span> <span class="eq-arrow">+</span> 37 O₂<span style="color:var(--muted);font-size:0.8em;">(g)</span> <span class="eq-arrow">→</span> 24 CO₂<span style="color:var(--muted);font-size:0.8em;">(g)</span> <span class="eq-arrow">+</span> 26 H₂O<span style="color:var(--muted);font-size:0.8em;">(g)</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:10px;font-family:'Space Mono',monospace;line-height:1.8;">
+          Real RP-1 is a mixture of many hydrocarbons — C₁₂H₂₆ is used as a surrogate for equations.<br>
+          Actual combustion also produces CO, H₂, and soot, especially when run fuel-rich.
+        </div>
+
+        <div class="bond-viz">
+          <div class="bond-side">
+            <div class="bond-label break-l">Bonds Breaking — C–C, C–H, O=O</div>
+            <div class="mol-display">
+              <div class="atom atom-C">C</div><span class="bond-line"></span><div class="atom atom-H">H</div>
+              <div class="atom atom-C">C</div><span class="bond-line"></span><div class="atom atom-C">C</div>
+              <div class="atom atom-O">O</div><span class="bond-double"></span><div class="atom atom-O">O</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;">
+              <span class="energy-badge eb-c">C–C, C–H bonds in RP-1 break</span>
+            </div>
+          </div>
+          <div class="bond-arrow">→</div>
+          <div class="bond-side">
+            <div class="bond-label form-l">New Bonds Forming — C=O and H–O (stronger)</div>
+            <div class="mol-display">
+              <div class="atom atom-O">O</div><span class="bond-double"></span><div class="atom atom-C">C</div><span class="bond-double"></span><div class="atom atom-O">O</div>
+              <div class="atom atom-H">H</div><span class="bond-line"></span><div class="atom atom-O">O</div><span class="bond-line"></span><div class="atom atom-H">H</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;">
+              <span class="energy-badge eb-c">Stronger C=O &amp; O–H bonds release energy</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="steps-row">
+        <div class="step-card"><div class="step-n">1</div><span class="step-icon">💧</span><div class="step-title" style="color:var(--fuel-c)">Atomize &amp; Mix</div><ul class="step-bullets"><li>RP-1 injected as fine droplets</li><li>Mixed with LOX, then ignited</li><li>Droplet size controls burn rate</li></ul></div>
+        <div class="step-card"><div class="step-n">2</div><span class="step-icon">🔥</span><div class="step-title" style="color:var(--fuel-c)">Bond Breaking → Forming</div><ul class="step-bullets"><li>C–C and C–H bonds in RP-1 break</li><li>New C=O and H–O bonds form</li><li>Stronger bonds = energy released</li></ul></div>
+        <div class="step-card"><div class="step-n">3</div><span class="step-icon">⚡</span><div class="step-title" style="color:var(--fuel-c)">High Velocity Exhaust</div><ul class="step-bullets"><li>Exhaust: H₂O, CO, H₂ (low mass)</li><li>High temp + low mass = high velocity</li><li>Exhaust velocity = thrust &amp; Isp</li></ul></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-cell"><div class="stat-val sc">292–340</div><div class="stat-unit">Isp (s) vacuum</div></div>
+        <div class="stat-cell"><div class="stat-val sc">3,670</div><div class="stat-unit">Flame temp (K)</div></div>
+        <div class="stat-cell"><div class="stat-val sc">0.8–0.9</div><div class="stat-unit">RP-1 density g/mL</div></div>
+        <div class="stat-cell"><div class="stat-val sc">1.5M</div><div class="stat-unit">F-1 thrust (lbf)</div></div>
+      </div>
+
+      <!-- O/F RATIO SLIDER -->
+      <div class="of-slider-wrap">
+        <div class="of-title">🎛 Interactive: Mixture Ratio — Fuel-Rich vs. Stoichiometric</div>
+        <div class="slider-row">
+          <input type="range" id="ofSlider" min="1.5" max="4.0" step="0.1" value="2.56" oninput="updateOF(this.value)">
+          <div class="of-val" id="ofVal">2.56</div>
+        </div>
+        <div class="of-result" id="ofResult">At 2.56:1 — <strong style="color:var(--fuel-c)">Near stoichiometric.</strong> Complete combustion, maximum efficiency.</div>
+        <p style="font-size:0.82rem;color:var(--muted);margin-top:12px;line-height:1.6;">Designers run slightly fuel-rich to lower exhaust molecular mass, increase exhaust velocity, and protect the nozzle from excess heat.</p>
+      </div>
+
+      <!-- COMBUSTION TEMP GAUGES -->
+      <div class="isp-section">
+        <div class="isp-title">🌡 Adiabatic Flame Temperature — All Three Propellants</div>
+        <div class="gauge-wrap">
+          <div><div class="gauge"><svg viewBox="0 0 120 120"><circle class="gauge-arc" cx="60" cy="60" r="45" stroke-dasharray="283"/><circle class="gauge-fill" id="gauge-c" cx="60" cy="60" r="45" stroke="var(--fuel-c)" stroke-dashoffset="283"/></svg><div class="gauge-val" style="color:var(--fuel-c)">3,670K<span>RP-1/LOX</span></div></div></div>
+          <div><div class="gauge"><svg viewBox="0 0 120 120"><circle class="gauge-arc" cx="60" cy="60" r="45" stroke-dasharray="283"/><circle class="gauge-fill" id="gauge-h" cx="60" cy="60" r="45" stroke="var(--fuel-h)" stroke-dashoffset="283"/></svg><div class="gauge-val" style="color:var(--fuel-h)">~3,500K<span>N₂H₄/N₂O₄</span></div></div></div>
+          <div><div class="gauge"><svg viewBox="0 0 120 120"><circle class="gauge-arc" cx="60" cy="60" r="45" stroke-dasharray="283"/><circle class="gauge-fill" id="gauge-s" cx="60" cy="60" r="45" stroke="var(--fuel-s)" stroke-dashoffset="283"/></svg><div class="gauge-val" style="color:var(--fuel-s)">~3,584K<span>LH₂/LOX</span></div></div></div>
+        </div>
+        <p style="font-size:0.78rem;color:var(--muted);text-align:center;margin-top:8px;">LH₂/LOX engines reach ~6,000°F (3,300°C), demanding advanced cooling systems for the chamber and nozzle.</p>
+      </div>
+
+      <div class="pc-grid">
+        <div class="pc-card pc-pro">
+          <div class="pc-head">✦ Advantages</div>
+          <div class="pc-item">Very high thrust — F-1 engine produced ~1.5 million pounds of thrust per engine</div>
+          <div class="pc-item">Dense fuel (~0.8–0.9 g/mL) means tanks can be relatively small</div>
+          <div class="pc-item">Well-understood combustion chemistry — reliable for large first stages</div>
+          <div class="pc-item">Good compromise of thrust and manageable tank size</div>
+        </div>
+        <div class="pc-card pc-con">
+          <div class="pc-head">✦ Disadvantages</div>
+          <div class="pc-item">Produces CO₂ and soot (black carbon) — smoky, less environmentally clean exhaust</div>
+          <div class="pc-item">Lower specific impulse than hydrolox (LH₂/LOX)</div>
+          <div class="pc-item">Fuel-rich operation produces CO and unburned carbon</div>
+          <div class="pc-item">LOX is cryogenic and must be loaded close to launch</div>
+        </div>
+      </div>
+
+      <div class="peecs peecs-c">
+        <div class="peecs-title">🌍 Real Mission Use</div>
+        <ul class="peecs-bullets">
+          <li>Powered the Saturn V first stage — five F-1 engines, ~1.5M lbf thrust each</li>
+          <li>Used to launch every Apollo mission to the Moon</li>
+          <li>Dense fuel (~0.8–0.9 g/mL) kept tank sizes manageable at liftoff</li>
+          <li>Saturn V fully fueled: 6.5 million pounds — RP-1/LOX provided the raw thrust</li>
+        </ul>
+      </div>
+    </div><!-- /chem-combustion -->
+
+    <!-- CHEMISTRY EXPLORER — HYPERGOLIC -->
+    <div id="chem-hypergolic" class="chem-explorer">
+
+      <div class="equation-box eq-h">
+        <div class="eq-label">⚛ Two Balanced Hypergolic Reactions</div>
+        <div class="equation" style="font-size:clamp(0.78rem,1.8vw,1.05rem);">
+          <div style="margin-bottom:10px;"><span style="color:var(--muted);font-size:0.75em;">With pure hydrazine:</span><br>
+          2 N₂H₄<span style="color:var(--muted);font-size:0.8em;">(l)</span> <span class="eq-arrow">+</span> N₂O₄<span style="color:var(--muted);font-size:0.8em;">(l)</span> <span class="eq-arrow">→</span> 3 N₂<span style="color:var(--muted);font-size:0.8em;">(g)</span> <span class="eq-arrow">+</span> 4 H₂O<span style="color:var(--muted);font-size:0.8em;">(g)</span></div>
+          <div><span style="color:var(--muted);font-size:0.75em;">With UDMH:</span><br>
+          C₂H₈N₂<span style="color:var(--muted);font-size:0.8em;">(l)</span> <span class="eq-arrow">+</span> 2 N₂O₄<span style="color:var(--muted);font-size:0.8em;">(l)</span> <span class="eq-arrow">→</span> 2 CO₂<span style="color:var(--muted);font-size:0.8em;">(g)</span> <span class="eq-arrow">+</span> 4 H₂O<span style="color:var(--muted);font-size:0.8em;">(g)</span> <span class="eq-arrow">+</span> 3 N₂<span style="color:var(--muted);font-size:0.8em;">(g)</span></div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:10px;font-family:'Space Mono',monospace;line-height:1.7;">
+          Real exhaust also contains small amounts of NO, NO₂, and other species — but N₂ and H₂O are the dominant stable products.<br>
+          N₂O₄ exists in equilibrium with NO₂ and forms reddish-brown toxic vapors.
+        </div>
+
+        <div class="bond-viz">
+          <div class="bond-side">
+            <div class="bond-label break-l">N–N, N–H, N–O Bonds Break</div>
+            <div class="mol-display">
+              <div class="atom atom-N">N</div><span class="bond-line"></span><div class="atom atom-N">N</div>
+              <div class="atom atom-H">H</div><div class="atom atom-H">H</div><div class="atom atom-H">H</div><div class="atom atom-H">H</div>
+              <div class="atom atom-O">O</div><span class="bond-double"></span><div class="atom atom-N">N</div><span class="bond-double"></span><div class="atom atom-O">O</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;">
+              <span class="energy-badge eb-h">Spontaneous contact — no igniter</span>
+            </div>
+          </div>
+          <div class="bond-arrow" style="animation-duration:0.8s;">⚡</div>
+          <div class="bond-side">
+            <div class="bond-label form-l">Very Stable N≡N &amp; O–H Bonds Form</div>
+            <div class="mol-display">
+              <div class="atom atom-N">N</div><span class="bond-line" style="height:6px;border-top:2px solid #818cf8;border-bottom:2px solid #818cf8;background:transparent;"></span><div class="atom atom-N">N</div>
+              <div class="atom atom-N">N</div><span class="bond-line" style="height:6px;border-top:2px solid #818cf8;border-bottom:2px solid #818cf8;background:transparent;"></span><div class="atom atom-N">N</div>
+              <div class="atom atom-H">H</div><span class="bond-line"></span><div class="atom atom-O">O</div><span class="bond-line"></span><div class="atom atom-H">H</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;">
+              <span class="energy-badge eb-h">N≡N is extremely stable → drives reaction</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="steps-row">
+        <div class="step-card"><div class="step-n">1</div><span class="step-icon">💥</span><div class="step-title" style="color:var(--fuel-h)">Contact Ignition</div><ul class="step-bullets"><li>Fuel + oxidizer meet → instant reaction</li><li>No spark or ignition system needed</li><li>Heat released before full mixing</li></ul></div>
+        <div class="step-card"><div class="step-n">2</div><span class="step-icon">⚡</span><div class="step-title" style="color:var(--fuel-h)">Bond Energetics</div><ul class="step-bullets"><li>N–N, N–H, N–O bonds break</li><li>Very stable N≡N &amp; O–H bonds form</li><li>Large energy difference drives reaction</li></ul></div>
+        <div class="step-card"><div class="step-n">3</div><span class="step-icon">🌬</span><div class="step-title" style="color:var(--fuel-h)">Low-Mass Exhaust</div><ul class="step-bullets"><li>Products: N₂ (inert, light) + H₂O</li><li>Low molecular mass → high velocity</li><li>High exhaust velocity = thrust</li></ul></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-cell"><div class="stat-val sh">270–290</div><div class="stat-unit">Isp (s) vacuum</div></div>
+        <div class="stat-cell"><div class="stat-val sh">None</div><div class="stat-unit">Ignition system</div></div>
+        <div class="stat-cell"><div class="stat-val sh">Room</div><div class="stat-unit">Storage temp.</div></div>
+        <div class="stat-cell"><div class="stat-val sh">Apollo</div><div class="stat-unit">CSM · LM · SPS</div></div>
+      </div>
+
+      <!-- UDMH vs Hydrazine toggle -->
+      <div class="of-slider-wrap">
+        <div class="of-title">🔀 Two Fuels, Same Oxidizer — Hydrazine vs. UDMH</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+          <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:16px;border:1px solid rgba(199,125,255,0.2);">
+            <div style="font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.15em;color:var(--fuel-h);margin-bottom:8px;">HYDRAZINE (N₂H₄)</div>
+            <p style="font-size:0.82rem;color:#8891a8;line-height:1.6;">Nitrogen-rich fuel. Reacts with N₂O₄ to produce mostly N₂ and H₂O. Used in smaller thrusters and some missile systems.</p>
+          </div>
+          <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:16px;border:1px solid rgba(199,125,255,0.2);">
+            <div style="font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.15em;color:var(--fuel-h);margin-bottom:8px;">UDMH (C₂H₈N₂) — Aerozine-50</div>
+            <p style="font-size:0.82rem;color:#8891a8;line-height:1.6;">Unsymmetrical dimethylhydrazine. The Apollo Command and Service Module used Aerozine-50 (a UDMH/hydrazine blend) with N₂O₄ for reliable restarts in space.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc-grid">
+        <div class="pc-card pc-pro">
+          <div class="pc-head">✦ Advantages</div>
+          <div class="pc-item">Hypergolic — ignite spontaneously on contact, no external ignition system needed</div>
+          <div class="pc-item">Storable liquids at near-room temperature — sit fueled for long periods</div>
+          <div class="pc-item">Highly reliable and restartable — critical for orbital maneuvers and lunar orbit insertion</div>
+          <div class="pc-item">Used for Apollo trans-Earth injection burns requiring precise re-ignition</div>
+        </div>
+        <div class="pc-card pc-con">
+          <div class="pc-head">✦ Disadvantages</div>
+          <div class="pc-item">Extreme toxicity and handling hazards — both fuel and oxidizer require elaborate safety procedures</div>
+          <div class="pc-item">N₂O₄ forms reddish-brown toxic vapors in equilibrium with NO₂</div>
+          <div class="pc-item">Lower vacuum Isp (~270–290 s) compared to hydrolox</div>
+          <div class="pc-item">Significant environmental protections required during handling and disposal</div>
+        </div>
+      </div>
+
+      <div class="peecs peecs-h">
+        <div class="peecs-title">🌍 Real Mission Use — Apollo Program</div>
+        <ul class="peecs-bullets">
+          <li>Powered the Apollo CSM Service Propulsion System (SPS) and Lunar Module engines</li>
+          <li>Propellants stored fueled for the entire mission — no cryogenic infrastructure in space</li>
+          <li>Hypergolic reliability was mission-critical: SPS had to fire for lunar orbit insertion and trans-Earth injection</li>
+          <li>Also used in Cold War missiles — storability meant instant launch readiness</li>
+        </ul>
+      </div>
+    </div><!-- /chem-hypergolic -->
+
+    <!-- CHEMISTRY EXPLORER — HYDROGEN (replaces solid) -->
+    <div id="chem-hydrogen" class="chem-explorer">
+
+      <div class="equation-box eq-s">
+        <div class="eq-label">⚛ Balanced Combustion Equation — Hydrogen &amp; Oxygen</div>
+        <div class="equation">
+          2 H₂<span style="color:var(--muted);font-size:0.8em;">(g)</span> <span class="eq-arrow">+</span> O₂<span style="color:var(--muted);font-size:0.8em;">(g)</span> <span class="eq-arrow">→</span> 2 H₂O<span style="color:var(--muted);font-size:0.8em;">(g)</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:10px;font-family:'Space Mono',monospace;line-height:1.8;">
+          At rocket combustion-chamber conditions, water is initially high-temperature steam — it then expands and cools through the nozzle to produce thrust.<br>
+          The only major chemical product is water vapor — the plume is relatively transparent and considered "clean."
+        </div>
+
+        <div class="bond-viz">
+          <div class="bond-side">
+            <div class="bond-label break-l">H–H Bonds &amp; O=O Bonds Break</div>
+            <div class="mol-display">
+              <div class="atom atom-H">H</div><span class="bond-line"></span><div class="atom atom-H">H</div>
+              <div class="atom atom-H">H</div><span class="bond-line"></span><div class="atom atom-H">H</div>
+              <div class="atom atom-O">O</div><span class="bond-double"></span><div class="atom atom-O">O</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;">
+              <span class="energy-badge eb-s">LH₂ stored at −253°C</span>
+            </div>
+          </div>
+          <div class="bond-arrow">→</div>
+          <div class="bond-side">
+            <div class="bond-label form-l">Very Strong O–H Bonds Form in H₂O</div>
+            <div class="mol-display">
+              <div class="atom atom-H">H</div><span class="bond-line"></span><div class="atom atom-O">O</div><span class="bond-line"></span><div class="atom atom-H">H</div>
+              <div class="atom atom-H">H</div><span class="bond-line"></span><div class="atom atom-O">O</div><span class="bond-line"></span><div class="atom atom-H">H</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;">
+              <span class="energy-badge eb-s">Lightest possible exhaust → highest Isp</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="steps-row">
+        <div class="step-card"><div class="step-n">1</div><span class="step-icon">❄️</span><div class="step-title" style="color:var(--fuel-s)">Cryogenic Storage</div><ul class="step-bullets"><li>LH₂ must be cooled to −253°C</li><li>Just 20° above absolute zero</li><li>Requires heavy insulation &amp; complex tanks</li></ul></div>
+        <div class="step-card"><div class="step-n">2</div><span class="step-icon">🔥</span><div class="step-title" style="color:var(--fuel-s)">O–H Bond Formation</div><ul class="step-bullets"><li>H–H and O=O bonds break</li><li>Strong O–H bonds form in H₂O</li><li>Only product: water vapor — clean exhaust</li></ul></div>
+        <div class="step-card"><div class="step-n">3</div><span class="step-icon">⚡</span><div class="step-title" style="color:var(--fuel-s)">Why Isp Is Highest</div><ul class="step-bullets"><li>H₂O exhaust = lightest possible molecules</li><li>Low mass → highest exhaust velocity</li><li>Exhaust velocity directly = Isp</li></ul></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-cell"><div class="stat-val ss">~450</div><div class="stat-unit">Isp (s) vacuum</div></div>
+        <div class="stat-cell"><div class="stat-val ss">−253</div><div class="stat-unit">LH₂ storage °C</div></div>
+        <div class="stat-cell"><div class="stat-val ss">H₂O</div><div class="stat-unit">Only exhaust product</div></div>
+        <div class="stat-cell"><div class="stat-val ss">J-2</div><div class="stat-unit">Saturn V engine</div></div>
+      </div>
+
+      <!-- LH2 density problem explainer -->
+      <div class="of-slider-wrap" style="--fuel-c:var(--fuel-s);">
+        <div class="of-title" style="color:var(--muted);">⚖️ The Density Tradeoff — Why LH₂ Isn't Used Everywhere</div>
+        <p style="font-size:0.85rem;color:#8891a8;line-height:1.7;margin-bottom:16px;">LH₂ has high energy per unit mass but very low density — tanks must be large and heavily insulated. This tradeoff determines where hydrolox is used:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:16px;border:1px solid rgba(82,183,136,0.2);">
+            <div style="font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.15em;color:var(--fuel-s);margin-bottom:8px;">UPPER STAGES ✓</div>
+            <ul class="step-bullets" style="margin:0;"><li>Vacuum efficiency matters most</li><li>Tank size less critical</li><li>Saturn V used J-2 engines (stages 2 &amp; 3)</li></ul>
+          </div>
+          <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:16px;border:1px solid rgba(82,183,136,0.2);">
+            <div style="font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.15em;color:var(--fuel-s);margin-bottom:8px;">FIRST STAGES ✗</div>
+            <ul class="step-bullets" style="margin:0;"><li>High thrust &amp; dense fuel matter more</li><li>LH₂ tanks too large — increase drag</li><li>RP-1 is ~6× denser than LH₂</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc-grid">
+        <div class="pc-card pc-pro">
+          <div class="pc-head">✦ Advantages</div>
+          <div class="pc-item">Highest specific impulse of the three propellant pairs used in Space Race</div>
+          <div class="pc-item">Very clean exhaust — only water vapor, no CO₂ or soot</div>
+          <div class="pc-item">Very high energy per unit mass of hydrogen</div>
+          <div class="pc-item">Enabled Saturn V to send Apollo spacecraft to the Moon from upper stages</div>
+        </div>
+        <div class="pc-card pc-con">
+          <div class="pc-head">✦ Disadvantages</div>
+          <div class="pc-item">Very low density — requires huge tanks and complex insulation</div>
+          <div class="pc-item">Both LH₂ and LOX are cryogenic, requiring advanced cooling systems</div>
+          <div class="pc-item">Combustion temperatures reach ~6,000°F — demanding cooling for chamber and nozzle</div>
+          <div class="pc-item">Less practical for first stages due to large tank size increasing drag</div>
+        </div>
+      </div>
+
+      <div class="peecs peecs-s">
+        <div class="peecs-title">🌍 Real Mission Use — Saturn V &amp; Space Shuttle</div>
+        <ul class="peecs-bullets">
+          <li>Saturn V stages 2 &amp; 3: five J-2 engines (S-II) + one J-2 (S-IVB)</li>
+          <li>Upper stage Isp advantage made the Moon missions possible</li>
+          <li>~6,000°F combustion required regenerative cooling — propellant flows around chamber walls before injection</li>
+          <li>Also used in Space Shuttle Main Engines and NASA's SLS RS-25 engines</li>
+        </ul>
+      </div>
+    </div><!-- /chem-hydrogen -->
+
+    <!-- ISP COMPARISON (shown after any selection) — all data from PDF -->
+    <div id="ispCompare" class="isp-section" style="display:none;">
+      <div class="isp-title">📊 Specific Impulse — All Three Space Race Propellants</div>
+      <div id="ispBars">
+        <div class="isp-row"><span class="isp-name">LH₂ / LOX<span class="isp-sub">Saturn V upper stages · J-2 engines</span></span><div class="bar-track"><div class="bar-fill bf-lh" data-w="100%" style="width:0"></div></div><span class="isp-num" style="color:var(--cyan)">~450 s</span></div>
+        <div class="isp-row"><span class="isp-name">RP-1 / LOX<span class="isp-sub">Saturn V first stage · F-1 engines</span></span><div class="bar-track"><div class="bar-fill bf-c" data-w="75%" style="width:0"></div></div><span class="isp-num" style="color:var(--fuel-c)">292–340 s</span></div>
+        <div class="isp-row"><span class="isp-name">N₂O₄ / UDMH or N₂H₄<span class="isp-sub">Apollo CSM · Lunar Module</span></span><div class="bar-track"><div class="bar-fill bf-h" data-w="64%" style="width:0"></div></div><span class="isp-num" style="color:var(--fuel-h)">270–290 s</span></div>
+      </div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-top:14px;font-family:'Space Mono',monospace;line-height:1.6;">Lower exhaust molecular mass = higher velocity = higher Isp. LH₂ wins because H₂O is lighter than CO₂. Hypergolics trade efficiency for storability.</p>
+    </div>
+
+  </div><!-- /PHASE 2 -->
+
+  <!-- ══════════════ PHASE 3 ══════════════ -->
+  <div id="phase3" class="phase">
+
+    <div id="launchScreen" class="launch-screen">
+
+      <!-- Screen flash overlay -->
+      <div class="ignition-flash" id="igFlash"></div>
+
+      <div class="launch-pad">
+
+        <!-- Rocket + flame as ONE unit so flame travels with rocket -->
+        <div class="launch-rocket-svg" id="launchRocketSvg">
+          <svg width="90" height="216" viewBox="0 0 90 216" style="overflow:visible;display:block;">
+
+            <!-- ── FLAME (below nozzle, points DOWN, hidden until ignition) ── -->
+            <g id="flameGroup" opacity="0">
+              <!-- Outer flame -->
+              <ellipse cx="45" cy="240" rx="18" ry="52"
+                fill="url(#flameGrad1)"
+                filter="url(#flameBlur)">
+                <animate attributeName="ry" values="52;58;50;56;52" dur="0.15s" repeatCount="indefinite"/>
+                <animate attributeName="rx" values="18;15;20;16;18" dur="0.12s" repeatCount="indefinite"/>
+              </ellipse>
+              <!-- Mid flame -->
+              <ellipse cx="45" cy="236" rx="11" ry="38"
+                fill="url(#flameGrad2)"
+                filter="url(#flameMidBlur)">
+                <animate attributeName="ry" values="38;44;36;42;38" dur="0.10s" repeatCount="indefinite"/>
+                <animate attributeName="rx" values="11;9;13;10;11"  dur="0.09s" repeatCount="indefinite"/>
+              </ellipse>
+              <!-- Inner core -->
+              <ellipse cx="45" cy="228" rx="5" ry="22"
+                fill="url(#flameGrad3)">
+                <animate attributeName="ry" values="22;26;20;24;22" dur="0.08s" repeatCount="indefinite"/>
+              </ellipse>
+            </g>
+
+            <!-- SVG defs for flame gradients & filters -->
+            <defs>
+              <radialGradient id="flameGrad1" cx="50%" cy="20%" r="60%">
+                <stop offset="0%"   stop-color="#ff6b6b" stop-opacity="1"/>
+                <stop offset="40%"  stop-color="#ff8c42" stop-opacity="0.9"/>
+                <stop offset="75%"  stop-color="#ffd700" stop-opacity="0.6"/>
+                <stop offset="100%" stop-color="#ff4400" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="flameGrad2" cx="50%" cy="15%" r="60%">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="1"/>
+                <stop offset="40%"  stop-color="#ffe066" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ff8c42" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="flameGrad3" cx="50%" cy="10%" r="60%">
+                <stop offset="0%"   stop-color="#ffffff" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#e0f0ff" stop-opacity="0"/>
+              </radialGradient>
+              <filter id="flameBlur">
+                <feGaussianBlur stdDeviation="2.5"/>
+              </filter>
+              <filter id="flameMidBlur">
+                <feGaussianBlur stdDeviation="1.2"/>
+              </filter>
+            </defs>
+
+            <!-- ── ROCKET BODY ── -->
+            <!-- Nose -->
+            <polygon points="45,5 22,60 68,60"
+              fill="rgba(78,205,196,0.15)" stroke="rgba(78,205,196,0.9)" stroke-width="1.8"
+              filter="drop-shadow(0 0 6px rgba(78,205,196,0.5))"/>
+            <line x1="45" y1="5"  x2="45" y2="60" stroke="rgba(78,205,196,0.4)" stroke-width="1"/>
+            <line x1="30" y1="36" x2="60" y2="36" stroke="rgba(78,205,196,0.3)" stroke-width="1"/>
+            <!-- Body -->
+            <rect x="22" y="60" width="46" height="120" rx="2"
+              fill="rgba(78,205,196,0.07)" stroke="rgba(78,205,196,0.85)" stroke-width="1.8"
+              filter="drop-shadow(0 0 5px rgba(78,205,196,0.3))"/>
+            <line x1="22" y1="95"  x2="68" y2="95"  stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <line x1="22" y1="130" x2="68" y2="130" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <line x1="22" y1="160" x2="68" y2="160" stroke="rgba(78,205,196,0.25)" stroke-width="1"/>
+            <rect x="27" y="72" width="36" height="38" rx="2"
+              fill="rgba(78,205,196,0.06)" stroke="rgba(78,205,196,0.5)" stroke-width="1.2"/>
+            <circle cx="36" cy="145" r="2" fill="rgba(78,205,196,0.7)"/>
+            <circle cx="45" cy="145" r="2" fill="rgba(78,205,196,0.7)"/>
+            <circle cx="54" cy="145" r="2" fill="rgba(78,205,196,0.7)"/>
+            <!-- Fins -->
+            <polygon points="68,150 82,182 68,182"
+              fill="rgba(78,205,196,0.1)" stroke="rgba(78,205,196,0.7)" stroke-width="1.5"/>
+            <polygon points="22,150 8,182 22,182"
+              fill="rgba(78,205,196,0.1)" stroke="rgba(78,205,196,0.7)" stroke-width="1.5"/>
+            <!-- Engine bell -->
+            <rect x="27" y="180" width="36" height="16" rx="2"
+              fill="rgba(255,107,107,0.2)" stroke="rgba(255,107,107,0.85)" stroke-width="1.8"
+              filter="drop-shadow(0 0 5px rgba(255,107,107,0.4))"/>
+            <path d="M30 196 L27 207 L30 213 L38 216 L52 216 L60 213 L63 207 L60 196 Z"
+              fill="rgba(255,107,107,0.25)" stroke="rgba(255,107,107,0.8)" stroke-width="1.5"/>
+
+          </svg>
+        </div>
+
+        <!-- Smoke puffs container -->
+        <div class="smoke-container" id="smokeContainer"></div>
+
+        <!-- Pad arms -->
+        <div class="pad-arm-l" id="padArmL"></div>
+        <div class="pad-arm-r" id="padArmR"></div>
+
+        <!-- Pad base -->
+        <div class="pad-base"></div>
+
+      </div><!-- /launch-pad -->
+
+      <div class="countdown-display" id="countdownDisplay">T - 5</div>
+      <div class="launch-status" id="launchStatus">ALL SYSTEMS NOMINAL</div>
+      <div class="launch-countdown" id="launchCount"></div><!-- kept for JS compat -->
+
+    </div>
+
+    <div id="dossier" class="dossier">
+
+      <div class="match-banner">
+        <div class="match-eyebrow">🎯 Intelligence Match Confirmed</div>
+        <div class="match-name" id="rocketName">—</div>
+        <div class="match-sub" id="rocketSub">—</div>
+        <div class="match-desc" id="rocketDesc">—</div>
+      </div>
+
+      <div class="dossier-grid">
+        <div class="card">
+          <div class="card-title">Your Design Choices</div>
+          <div id="choicesList"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Actual Specifications</div>
+          <div id="specsList"></div>
+        </div>
+      </div>
+
+      <div class="chem-summary">
+        <h3>⚛ Your Propellant Chemistry</h3>
+        <div class="chem-eq-final" id="chemEqFinal">—</div>
+        <p id="chemSummaryText" style="font-size:0.88rem;color:#8891a8;line-height:1.75;font-weight:300;"></p>
+      </div>
+
+      <div class="history-block">
+        <div class="history-title">📜 Historical Significance</div>
+        <div class="history-body" id="historyText">—</div>
+      </div>
+
+      <!-- CONNECTION TO INNO PROJECT -->
+      <div class="inno-section">
+        <div class="inno-header">
+          <span class="inno-tag">Inno Project</span>
+          <h3 class="inno-title">Connection to Inno Project</h3>
+        </div>
+        <p class="inno-intro">This game bridges chemistry and history by simulating the propellant trade-offs of the Cold War.</p>
+
+        <div class="inno-points">
+
+          <div class="inno-point">
+            <div class="inno-point-num">1</div>
+            <div class="inno-point-body">
+              <div class="inno-point-title">The Space Race: Efficiency</div>
+              <ul class="peecs-bullets">
+                <li>Select RP-1 or LH₂ to maximize Specific Impulse (ISP) — mirroring the Space Race goal of reaching orbit efficiently</li>
+                <li>The O/F Ratio slider lets you manage combustion stoichiometry:</li>
+              </ul>
+              <div class="inno-equation">
+                C₁₂H₂₆<span class="inno-eq-state">(l)</span> + 18.5 O₂<span class="inno-eq-state">(l)</span> <span class="inno-arrow">→</span> 12 CO₂<span class="inno-eq-state">(g)</span> + 13 H₂O<span class="inno-eq-state">(g)</span>
+              </div>
+              <ul class="peecs-bullets">
+                <li>An improper ratio causes fuel-rich waste — a real hurdle NASA and Soviet engineers faced in the 1960s</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="inno-point">
+            <div class="inno-point-num">2</div>
+            <div class="inno-point-body">
+              <div class="inno-point-title">The Cuban Missile Crisis: Readiness</div>
+              <ul class="peecs-bullets">
+                <li>Cryogenic fuels (RP-1/LOX, LH₂/LOX) take hours to load — impractical for military alert</li>
+                <li>Hypergolic propellants like Hydrazine (N₂H₄) are storable and ignite on contact — instant readiness</li>
+                <li>Ideal for the Silo and Mobile TEL launch systems in the game</li>
+                <li>During the Cuban Missile Crisis, this chemical "instant-readiness" was the backbone of nuclear deterrence</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="citations">
+        <div class="cite-head">📚 Works Cited</div>
+        <div class="cite-item">H2GP Foundation. "The Battle of Rocket Fuels in Space Exploration: RP-1 vs. Liquid Hydrogen - My Framer Site." <em>H2gp.org</em>, 25 Sept. 2025, www.h2gp.org/blog-pages/blog/the-battle-of-rocket-fuels-inspace-exploration-rp-1-vs-liquid-hydrogen. Accessed 11 Mar. 2026.</div>
+        <div class="cite-item">MacDonald, Megan Edwards, et al. "Decomposition Kinetics of the Rocket Propellant RP-1 and Its Chemical Kinetic Surrogates." <em>Stanford.edu</em>, 2012, purl.stanford.edu/ng820gf9574. Accessed 10 Mar. 2026.</div>
+        <div class="cite-item">National Air and Space Museum. "Rocket Engine, Liquid Fuel, F-1 | National Air and Space Museum." <em>Airandspace.si.edu</em>, airandspace.si.edu/collection-objects/rocket-engine-liquid-fuel-f-1/nasm_A19750649000. Accessed 10 Mar. 2026.</div>
+        <div class="cite-item">Nufer, B. "A Summary of NASA and USAF Hypergolic Propellant Related Spills and Fires."</div>
+        <div class="cite-item">---. <em>HYPERGOLIC PROPELLANTS: THE HANDLING HAZARDS and LESSONS LEARNED from USE</em>.</div>
+        <div class="cite-item">Saturn5Energy. "Saturn5Energy - Launch Loop." <em>Launchloop.com</em>, 12 July 2018, launchloop.com/Saturn5Energy. Accessed 11 Mar. 2026.</div>
+        <div class="cite-item">Wells, Bruce. "Kerosene Rocket Fuel." <em>American Oil &amp; Gas Historical Society</em>, 11 July 2022, aoghs.org/products/kerosene-rocket-fuel/. Accessed 10 Mar. 2026.</div>
+        <div class="cite-item">Wu, Brian. "Methane vs. Kerosene as Rocket Fuels." <em>Stanford.edu</em>, 2023, large.stanford.edu/courses/2023/ph240/wu1/. Accessed 11 Mar. 2026.</div>
+      </div>
+
+    </div><!-- /dossier -->
+
+  </div><!-- /PHASE 3 -->
+
+  <!-- NAV BUTTONS -->
+  <div class="nav-bar">
+    <button class="btn btn-ghost hidden" id="backBtn" onclick="goBack()">← Back</button>
+    <button class="btn btn-primary" id="nextBtn" onclick="goNext()" disabled>Next Phase →</button>
+    <button class="btn btn-danger hidden" id="launchBtn" onclick="doLaunch()">🚀 Launch Sequence</button>
+    <button class="btn btn-ghost hidden" id="resetBtn" onclick="location.reload()">🔄 Build Another</button>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+/* ═══════════════════════════════════════════
+   STARFIELD
+═══════════════════════════════════════════ */
+(function(){
+  const sf=document.getElementById('starfield');
+  for(let i=0;i<140;i++){
+    const s=document.createElement('div');
+    s.className='star';
+    const sz=Math.random()*2.5+0.5;
+    s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${Math.random()*4+2}s;--delay:${Math.random()*5}s;--min-op:${Math.random()*0.1};--max-op:${Math.random()*0.7+0.2};`;
+    sf.appendChild(s);
+  }
+})();
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+const state = {
+  phase: 1,
+  structure: null, engine: null, deploy: null,
+  fuel: null   // 'combustion' | 'hypergolic' | 'hydrogen'
+};
+
+/* ═══════════════════════════════════════════
+   PHASE 1 — COMPONENT SELECTION
+═══════════════════════════════════════════ */
+const calloutLabels = {
+  structure:{ r7:'Clustered', atlas:'Balloon Tank', monolith:'Monolith' },
+  engine:{ vernier:'Vernier', 'stage-half':'Stage+Half', single:'Single Nozzle' },
+  deploy:{ silo:'Silo Launch', mobile:'Mobile TEL' }
+};
+
+document.querySelectorAll('.comp-option').forEach(opt=>{
+  opt.addEventListener('click',()=>{
+    const cat=opt.dataset.cat, val=opt.dataset.val;
+    document.querySelectorAll(`[data-cat="${cat}"]`).forEach(o=>o.classList.remove('selected'));
+    opt.classList.add('selected');
+    state[cat]=val;
+    updatePill(cat);
+    updateCallout(cat,val);
+    updateBlueprint();
+    updateStatusBar();
+    checkPhase1();
+  });
+});
+
+function updatePill(cat){
+  const map={structure:'pill-structure',engine:'pill-engine',deploy:'pill-deploy'};
+  document.getElementById(map[cat]).classList.add('done');
+}
+
+function updateCallout(cat,val){
+  const g=document.getElementById(`callout-${cat}`);
+  const lbl=document.getElementById(`lbl-${cat}`);
+  g.style.opacity='1';
+  lbl.textContent=calloutLabels[cat][val];
+}
+
+function updateBlueprint(){
+  ['nose','body','fins','engine'].forEach((id,i)=>{
+    setTimeout(()=>{
+      const el=document.getElementById(id);
+      el.style.opacity='1';
+      el.style.transform='scale(1)';
+    },i*100);
+  });
+  const boosters=document.getElementById('boosters');
+  if(state.structure==='r7'){
+    setTimeout(()=>{ boosters.style.opacity='1'; },400);
+  } else {
+    boosters.style.opacity='0';
+  }
+  // Update blueprint ID
+  const ids={r7:'R-7 SEMYORKA',atlas:'SM-65 ATLAS',monolith:'MONOLITH BODY',vernier:'VERNIER ENG',
+    'stage-half':'STG+HALF ENG',single:'SINGLE ENG',silo:'SILO DEPLOY',mobile:'MOBILE TEL'};
+  const parts=[state.structure,state.engine,state.deploy].filter(Boolean).map(v=>ids[v]||'');
+  document.getElementById('blueprintId').textContent=parts.join(' | ')||'REV 00 — UNCLASSIFIED';
+}
+
+function updateStatusBar(){
+  const n=[state.structure,state.engine,state.deploy].filter(Boolean).length;
+  const sb=document.getElementById('statusBar');
+  if(n===0) sb.innerHTML='Select components from the left panel to begin assembly';
+  else if(n<3) sb.innerHTML=`<span class="hl">${n}/3</span> components selected — keep going`;
+  else sb.innerHTML=`<span class="hl">✓ All systems configured!</span> Ready for propellant chemistry lab`;
+}
+
+function checkPhase1(){
+  document.getElementById('nextBtn').disabled=!(state.structure&&state.engine&&state.deploy);
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — FUEL SELECTION
+═══════════════════════════════════════════ */
+function selectFuel(type, card){
+  // Update cards
+  document.querySelectorAll('.fuel-card').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+  state.fuel=type;
+
+  // Hide all explorers
+  document.querySelectorAll('.chem-explorer').forEach(e=>e.classList.remove('visible'));
+
+  // Show correct explorer (hydrogen maps to chem-hydrogen)
+  const explorerMap = { combustion:'chem-combustion', hypergolic:'chem-hypergolic', hydrogen:'chem-hydrogen' };
+  document.getElementById(explorerMap[type]).classList.add('visible');
+
+  // Show ISP comparison
+  const isp=document.getElementById('ispCompare');
+  isp.style.display='block';
+  setTimeout(()=>{
+    isp.querySelectorAll('.bar-fill[data-w]').forEach(b=>{ b.style.width=b.dataset.w; });
+    animateGauges();
+  },200);
+
+  // Enable launch button
+  document.getElementById('launchBtn').classList.remove('hidden');
+  document.getElementById('launchBtn').disabled=false;
+  document.getElementById('nextBtn').classList.add('hidden');
+}
+
+/* O/F Ratio slider */
+function updateOF(val){
+  const v=parseFloat(val);
+  document.getElementById('ofVal').textContent=v.toFixed(2);
+  const res=document.getElementById('ofResult');
+  if(v<2.0){
+    res.innerHTML=`At ${v.toFixed(2)}:1 — <span style="color:#f87171;font-weight:600;">Very fuel-rich.</span> Excess kerosene won't combust — massive energy waste, black sooty exhaust, lower thrust.`;
+  } else if(v<2.4){
+    res.innerHTML=`At ${v.toFixed(2)}:1 — <span style="color:#fbbf24;font-weight:600;">Slightly fuel-rich.</span> Some benefit to nozzle cooling, but efficiency is reduced. Not ideal for maximum thrust.`;
+  } else if(v<2.7){
+    res.innerHTML=`At ${v.toFixed(2)}:1 — <span style="color:var(--fuel-c);font-weight:600;">Near-optimal range.</span> Most RP-1/LOX engines operate here. At exactly 2.56:1 you hit peak stoichiometric combustion.`;
+  } else if(v<3.2){
+    res.innerHTML=`At ${v.toFixed(2)}:1 — <span style="color:#fbbf24;font-weight:600;">Slightly oxidizer-rich.</span> Excess O₂ carries heat away, raising nozzle temperatures. Can damage engine components.`;
+  } else {
+    res.innerHTML=`At ${v.toFixed(2)}:1 — <span style="color:#f87171;font-weight:600;">Very oxidizer-rich.</span> Severe overheating. LOX attacks metal components at this ratio — catastrophic nozzle erosion likely.`;
+  }
+}
+
+/* Combustion temp gauges */
+function animateGauges(){
+  // Values as % of max (3300°C)
+  const data=[{id:'gauge-c',pct:100},{id:'gauge-h',pct:82},{id:'gauge-s',pct:91}];
+  data.forEach(d=>{
+    const el=document.getElementById(d.id);
+    if(el){
+      const offset=283-(283*(d.pct/100));
+      setTimeout(()=>{ el.style.strokeDashoffset=offset; },200);
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — LAUNCH & DOSSIER
+═══════════════════════════════════════════ */
+const rocketDB = {
+  saturn_hydrogen:{
+    name:'Saturn V — Upper Stages',sub:'S-II & S-IVB · USA · 1967',
+    desc:'Your hydrolox configuration matches the Saturn V second and third stages, powered by J-2 engines burning liquid hydrogen and liquid oxygen. These upper stage burns in near-vacuum provided the efficiency needed to send Apollo spacecraft to the Moon.',
+    specs:{'Height (S-II)':'24.8m','Engines':'5 × J-2 (S-II)','Thrust (S-II)':'5,000 kN','Isp (vacuum)':'~421 s','Propellant':'LH₂ / LOX','Mission':'Apollo lunar missions'},
+    chemEq:'2 H₂(g) + O₂(g) → 2 H₂O(g) | Only major product: water vapor',
+    chemText:'H–H bonds in H₂ and O=O bonds in O₂ break; new O–H bonds form in H₂O, releasing a very large enthalpy of reaction. Because hydrogen is so light, the exhaust water vapor has very low molecular mass — giving very high exhaust velocity and specific impulse compared with kerosene. Combustion temperatures reach about 6,000°F (~3,300°C), demanding advanced regenerative cooling systems.',
+    history:'LH₂/LOX powered the Saturn V second stage (five J-2 engines) and third stage (one J-2 engine). The J-2 was the first large production engine to use liquid hydrogen as fuel. These upper stage burns were performed in near-vacuum conditions where hydrolox\'s superior specific impulse mattered most — without them, Apollo could not have reached the Moon. NASA continued using LH₂/LOX in the Space Shuttle Main Engines and now in the SLS RS-25 engines.'
+  },
+  r7_combustion:{
+    name:'R-7 Semyorka',sub:'8K71 · USSR · 1957',
+    desc:'Your clustered booster design burning RP-1/LOX matches the iconic R-7 Semyorka — the world\'s first ICBM and the rocket that launched Sputnik. Its four strap-on boosters created the "Korolev Cross" staging pattern visible from Earth.',
+    specs:{'Height':'34m','Diameter':'10.3m at base','Mass':'280,000 kg','Thrust':'3,900 kN','Range':'8,800 km','Propellant':'RP-1 / LOX'},
+    chemEq:'2 C₁₂H₂₆ + 37 O₂ → 24 CO₂ + 26 H₂O (dodecane surrogate for RP-1)',
+    chemText:'RP-1 is injected and atomized into fine droplets, then mixed with LOX and ignited. C–C and C–H bonds in the hydrocarbon break, and new C–O and H–O bonds form in CO₂ and H₂O. The adiabatic flame temperature is around 3,670 K. High temperature and low molecular-weight exhaust species produce high exhaust velocity and specific impulse.',
+    history:'Designed as an ICBM, the R-7 was too complex for military deployment. On October 4, 1957, a modified R-7 launched Sputnik 1, shocking the world. Its derivatives have launched more missions than any other rocket family in history, from Vostok (Gagarin, 1961) to modern Soyuz crew flights.'
+  },
+  atlas_combustion:{
+    name:'SM-65 Atlas',sub:'Atlas D · USA · 1959',
+    desc:'Your balloon tank construction with stage-and-a-half engine architecture burning RP-1/LOX matches the revolutionary SM-65 Atlas — America\'s first operational ICBM. The balloon tanks were just 0.25mm thick — thinner than a dime.',
+    specs:{'Height':'22.9m','Diameter':'3.05m','Mass':'120,000 kg','Thrust':'1,600 kN','Range':'14,500 km','Propellant':'RP-1 / LOX'},
+    chemEq:'2 C₁₂H₂₆ + 37 O₂ → 24 CO₂ + 26 H₂O (dodecane surrogate for RP-1)',
+    chemText:'The Atlas used a stage-and-a-half configuration: both booster and sustainer engines ignited at liftoff, and only the boosters dropped away mid-flight. RP-1 is dense (~0.8–0.9 g/mL), so tanks could be thin-walled pressurized "balloons" — the ultimate mass-saving solution. Engines often ran slightly fuel-rich to lower average molecular weight of exhaust and increase specific impulse.',
+    history:'John Glenn orbited Earth on an Atlas in 1962. The Atlas served as America\'s primary ICBM from 1959–1965 and launched all four Mercury orbital missions. Atlas-Centaur variants continue launching satellites today, making it one of the longest-serving rocket families in history.'
+  },
+  r12_hypergolic:{
+    name:'R-12 Dvina',sub:'SS-4 Sandal · USSR · 1959',
+    desc:'Your monolithic structure with hypergolic propellants matches the R-12 Dvina — the Soviet medium-range ballistic missile that triggered the Cuban Missile Crisis. Storable N₂O₄/hydrazine propellants meant it stayed ready for months.',
+    specs:{'Height':'22.8m','Diameter':'1.65m','Mass':'42,000 kg','Thrust':'740 kN','Range':'2,000 km','Propellant':'UDMH / N₂O₄'},
+    chemEq:'2 N₂H₄(l) + N₂O₄(l) → 3 N₂(g) + 4 H₂O(g) | also: C₂H₈N₂ + 2 N₂O₄ → 2 CO₂ + 4 H₂O + 3 N₂',
+    chemText:'N₂O₄ and hydrazine-type fuels are storable liquids at near-room temperature. When fuel and oxidizer streams meet, electron transfer and rapid oxidation reactions start almost instantly — releasing heat even before full mixing. Breaking N–N and N–H bonds in hydrazines and N–O bonds in N₂O₄, then forming very stable N≡N bonds in N₂ and O–H bonds in water, releases large chemical energy.',
+    history:'The Cuban Missile Crisis of October 1962 was triggered by U-2 spy plane photos of R-12 missiles being assembled in Cuba. Each could reach most US cities with a nuclear warhead. The 13-day standoff brought the world closest to nuclear war. The USSR withdrew the missiles in exchange for the secret removal of US Jupiter missiles from Turkey.'
+  },
+  mobile_hypergolic:{
+    name:'Apollo CSM — Service Propulsion System',sub:'Aerozine-50 / N₂O₄ · USA · 1966',
+    desc:'Your mobile/versatile hypergolic configuration matches the Apollo Command and Service Module\'s Service Propulsion System — the engine that had to fire reliably for lunar orbit insertion and the critical trans-Earth injection burn to bring astronauts home.',
+    specs:{'SPS Engine Mass':'6,600 lb (3,000 kg)','Propellant':'Aerozine-50 / N₂O₄','Isp (vacuum)':'~314 s','Restarts':'Unlimited','Mission':'Apollo 7–17','Key burns':'LOI & TEI'},
+    chemEq:'C₂H₈N₂(l) + 2 N₂O₄(l) → 2 CO₂(g) + 4 H₂O(g) + 3 N₂(g)',
+    chemText:'The Apollo CSM used Aerozine-50 — a 50/50 blend of UDMH and hydrazine — with N₂O₄ as oxidizer. The hypergolic ignition (spontaneous on contact) gave reliable restarts in space with no ignition system to fail. Typical vacuum Isp for N₂O₄/UDMH systems is around 270–290 s — lower than hydrolox but ideal for compact, storable spacecraft propulsion.',
+    history:'The Apollo Command and Service Module\'s Service Propulsion System had to fire twice per lunar mission: once to slow into lunar orbit (LOI) and once to break free for Earth (TEI). A failure on either burn would strand the crew. Hypergolic propellants were chosen precisely because their spontaneous ignition and room-temperature storability made them the most reliable option for these critical, unrecoverable burns.'
+  }
+};
+
+function determineRocket(){
+  const {structure,engine,deploy,fuel}=state;
+  if(fuel==='hydrogen') return 'saturn_hydrogen';
+  if(fuel==='hypergolic'&&deploy==='mobile') return 'mobile_hypergolic';
+  if(fuel==='hypergolic') return 'r12_hypergolic';
+  if(structure==='atlas'&&engine==='stage-half') return 'atlas_combustion';
+  if(structure==='r7') return 'r7_combustion';
+  return 'atlas_combustion';
+}
+
+/* ═══════════════════════════════════════════
+   SMOKE PUFF GENERATOR
+═══════════════════════════════════════════ */
+function spawnSmoke(){
+  const c=document.getElementById('smokeContainer');
+  if(!c) return;
+  for(let i=0;i<3;i++){
+    const p=document.createElement('div');
+    p.className='smoke-puff';
+    const size=30+Math.random()*40;
+    const dx=(Math.random()-0.5)*80;
+    p.style.cssText=`width:${size}px;height:${size}px;left:${40+Math.random()*40}px;bottom:${Math.random()*20}px;--dx:${dx}px;animation-delay:${Math.random()*0.3}s;animation-duration:${1.5+Math.random()}s;`;
+    c.appendChild(p);
+    setTimeout(()=>p.remove(), 2500);
+  }
+}
+
+function doLaunch(){
+  goToPhase(3);
+
+  const display  = document.getElementById('countdownDisplay');
+  const status   = document.getElementById('launchStatus');
+  const rocket   = document.getElementById('launchRocketSvg');
+  const flame    = document.getElementById('flameGroup');
+  const padArmL  = document.getElementById('padArmL');
+  const padArmR  = document.getElementById('padArmR');
+  const flash    = document.getElementById('igFlash');
+
+  const steps = [
+    { t:0,    label:'T - 5', status:'ALL SYSTEMS NOMINAL' },
+    { t:900,  label:'T - 4', status:'PROPELLANT PRESSURIZATION' },
+    { t:1800, label:'T - 3', status:'GUIDANCE SYSTEM ACTIVE' },
+    { t:2700, label:'T - 2', status:'ENGINE CHILL-DOWN SEQUENCE' },
+    { t:3600, label:'T - 1', status:'FINAL ARMING COMPLETE' },
+    { t:4500, label:'IGNITION', status:'MAIN ENGINE START', go:true },
+  ];
+
+  steps.forEach(s=>{
+    setTimeout(()=>{
+      display.textContent = s.label;
+      status.textContent  = s.status;
+      if(s.go) display.classList.add('go');
+    }, s.t);
+  });
+
+  // Ignition at T-0
+  setTimeout(()=>{
+    // Screen flash
+    flash.classList.add('flash');
+    setTimeout(()=>flash.classList.remove('flash'), 600);
+
+    // Show SVG flame (it's inside the rocket so it moves with it)
+    flame.setAttribute('opacity','1');
+
+    // Smoke puffs from pad (stay on pad, separate)
+    let smokeInterval = setInterval(spawnSmoke, 180);
+
+    // Arms swing away
+    padArmL.classList.add('release');
+    padArmR.classList.add('release');
+
+    // Brief hold then lift-off
+    setTimeout(()=>{
+      status.textContent = 'LIFTOFF';
+      rocket.classList.add('firing');
+
+      // Fade flame opacity as rocket shrinks in distance
+      setTimeout(()=>{
+        flame.style.transition='opacity 0.8s';
+        flame.setAttribute('opacity','0');
+        clearInterval(smokeInterval);
+      }, 2000);
+
+      // Show dossier
+      setTimeout(()=>{ showDossier(); }, 3400);
+
+    }, 700);
+
+  }, 4500);
+}
+
+function showDossier(){
+  document.getElementById('launchScreen').style.display='none';
+  const dossier=document.getElementById('dossier');
+  dossier.classList.add('visible');
+
+  const key=determineRocket();
+  const r=rocketDB[key];
+
+  document.getElementById('rocketName').textContent=r.name;
+  document.getElementById('rocketSub').textContent=r.sub;
+  document.getElementById('rocketDesc').textContent=r.desc;
+
+  const cl=document.getElementById('choicesList');
+  const snames={r7:'Clustered Boosters',atlas:'Balloon Tank',monolith:'Monolith Body'};
+  const enames={vernier:'Vernier Thrusters','stage-half':'Stage+Half',single:'Single Nozzle'};
+  const dnames={silo:'Silo/Pad Launch',mobile:'Mobile TEL'};
+  const fnames={combustion:'RP-1 / LOX (Kerolox)',hypergolic:'N₂H₄ or UDMH / N₂O₄ (Hypergolic)',hydrogen:'LH₂ / LOX (Hydrolox)'};
+  cl.innerHTML=[
+    {k:'Structure',v:snames[state.structure]},
+    {k:'Engine',v:enames[state.engine]},
+    {k:'Deployment',v:dnames[state.deploy]},
+    {k:'Propellant',v:fnames[state.fuel]}
+  ].map(i=>`<div class="spec-row"><span class="spec-k">${i.k}</span><span class="spec-v">${i.v}</span></div>`).join('');
+
+  document.getElementById('specsList').innerHTML=Object.entries(r.specs).map(([k,v])=>`<div class="spec-row"><span class="spec-k">${k}</span><span class="spec-v">${v}</span></div>`).join('');
+  document.getElementById('chemEqFinal').textContent=r.chemEq;
+  document.getElementById('chemSummaryText').textContent=r.chemText;
+  document.getElementById('historyText').textContent=r.history;
+
+  document.getElementById('resetBtn').classList.remove('hidden');
+}
+
+/* ═══════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════ */
+function goToPhase(n){
+  document.querySelectorAll('.phase').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`phase${n}`).classList.add('active');
+  state.phase=n;
+
+  document.querySelectorAll('.step').forEach((s,i)=>{
+    s.classList.toggle('active',i+1===n);
+    s.classList.toggle('done',i+1<n);
+  });
+
+  const back=document.getElementById('backBtn');
+  const next=document.getElementById('nextBtn');
+  const launch=document.getElementById('launchBtn');
+  const reset=document.getElementById('resetBtn');
+
+  back.classList.toggle('hidden',n===1);
+  next.classList.toggle('hidden',n!==1);
+  launch.classList.toggle('hidden',n!==2||!state.fuel);
+  reset.classList.add('hidden');
+
+  if(n===1) next.disabled=!(state.structure&&state.engine&&state.deploy);
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function goNext(){
+  if(state.phase===1){
+    if(!(state.structure&&state.engine&&state.deploy)){
+      let a=document.querySelector('.alert');
+      if(!a){ a=document.createElement('div'); a.className='alert'; a.textContent='⚠️ Please select all three components before proceeding.'; document.querySelector('.assembly-grid').before(a); setTimeout(()=>a.remove(),3000); }
+      return;
+    }
+    goToPhase(2);
+  }
+}
+
+function goBack(){
+  if(state.phase>1) goToPhase(state.phase-1);
+}
+</script>
+
+</body>
+</html>
